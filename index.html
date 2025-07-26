@@ -51,17 +51,22 @@
 </head>
 <body>
   <div class="container">
-    <h1>Escala -- DAESP</h1>
+    <h1>Escala DAESP</h1>
     <button id="btnAdmin">Área Administrativa</button><br/>
-    <button id="btnVisualizar">Visualizar Escala</button>
+    <button id="btnVisualizar">Visualizar Escala</button><br/>
+    <button id="btnVisualizar">Portal do APJ</button><br/>
+
   </div>
 
 <script>
   document.getElementById('btnAdmin').onclick = () => {
-    window.location.href = 'admin-daesp-old.html';
+    window.location.href = 'admin-daesp.html';
   };
   document.getElementById('btnVisualizar').onclick = () => {
     window.location.href = 'view13.html';
+  };
+  document.getElementById('btnVisualizar').onclick = () => {
+    window.location.href = 'https://sites.google.com/trt1.jus.br/portaldoapj?usp=sharing';
   };
 </script>
 </body>
