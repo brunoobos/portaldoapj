@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Escala DAESP - Menu</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+    display: flex;
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+  }
+  .container {
+    background: white;
+    padding: 30px 40px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px #aaa;
+    text-align: center;
+  }
+  h1 {
+    margin-bottom: 25px;
+  }
+  button {
+    width: 200px;
+    padding: 12px 0;
+    margin: 10px 0;
+    font-size: 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: white;
+    transition: background 0.3s;
+  }
+  button#btnAdmin {
+    background-color: #007bff;
+  }
+  button#btnAdmin:hover {
+    background-color: #0056b3;
+  }
+  button#btnVisualizar {
+    background-color: #28a745;
+  }
+  button#btnVisualizar:hover {
+    background-color: #1e7e34;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Escala DAESP</h1>
+    <button id="btnAdmin">Área Administrativa</button><br/>
+    <button id="btnVisualizar">Visualizar Escala</button>
+  </div>
+
+<script>
+  document.getElementById('btnAdmin').onclick = () => {
+    window.location.href = 'admin-daesp-old.html';
+  };
+  document.getElementById('btnVisualizar').onclick = () => {
+    window.location.href = 'view13.html';
+  };
+</script>
+</body>
+</html>

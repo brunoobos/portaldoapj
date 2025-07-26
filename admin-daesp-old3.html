@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Escala 24x96 - Admin Completo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .section {
+      margin-bottom: 20px;
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    button {
+      margin-right: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Administração da Escala DAESP</h1>
+
+  <div class="section" id="equipes-container"></div>
+
+  <button id="btnAddEquipe">Adicionar Equipe</button>
+  <button id="btnSalvar">Salvar Equipes</button>
+  <button id="btnVisualizar">Visualizar Equipes</button>
+  <button id="btnExcluir">Excluir Equipe</button>
+  <button id="btnAfastamentos">Cadastrar Afastamentos</button>
+  <button id="btnExcluirAfastamento">Excluir Afastamento</button>
+  <button id="btnFeriados">Cadastrar Feriados</button>
+  <button id="btnExcluirFeriado">Excluir Feriado</button>
+
+  <div class="section">
+    <h2>Gerar Relatório da Escala</h2>
+    <label for="selectEquipe">Equipe:</label>
+    <select id="selectEquipe">
+      <option value="-1">Todas as equipes</option>
+    </select><br/>
+
+    <label for="selectMes">Mês:</label>
+    <select id="selectMes"></select><br/>
+
+    <label for="selectAno">Ano:</label>
+    <select id="selectAno"></select><br/>
+
+    <button id="btnGerarEscala">Gerar Escala Mensal</button>
+  </div>
+
+  <button id="btnAddTarefa">Adicionar Tarefa</button>
+
+  <div id="relatorio"></div>
+
+  <!-- Aqui você pode adicionar seus modais se houver -->
+
+  <script src="equipes.js"></script>
+</body>
+</html>
