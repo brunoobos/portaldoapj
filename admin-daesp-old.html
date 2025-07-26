@@ -24,18 +24,25 @@
   .calendar-day.hoje { background-color: yellow !important; color: black; }
   .calendar-day .data-num { font-weight: bold; }
   .work { margin: 2px 0; padding: 2px 4px; border-radius: 3px; cursor: pointer; }
-  .work.extra-name { background: #ff66b2; color: white; }
+  .work.extra-name { background: #ff66b2; color: white; } /* cor rosa para nomes extras */
   .afastamento { margin: 2px 0; padding: 2px 4px; border-radius: 3px; font-size: 11px; color: #fff; }
   .ferias { background: #ffc107; color: #333; }
   .licenca { background: #dc3545; }
   .compensacao { background: #6f42c1; }
-  .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+
+  .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; 
+           background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
   .modal-content { background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; position: relative; }
   .modal-content label { display: block; margin: 10px 0 4px; }
   .modal-content input, .modal-content select { width: 100%; padding: 6px; box-sizing: border-box; }
   .close { position: absolute; top: 10px; right: 15px; font-size: 20px; cursor: pointer; }
+  
 </style>
 </head>
+<script src="equipes.js"></script>
+</body>
+</html>
+
 <body>
 
 <h1>Administração da Escala 24x96</h1>
@@ -66,7 +73,7 @@
 
 <div id="relatorio"></div>
 
-<!-- Seus modais completos (cadastrar afastamento, feriado e tarefa) -->
+<!-- Modal afastamento -->
 <div id="modalAfastamento" class="modal">
   <div class="modal-content">
     <span class="close" onclick="fecharModal('modalAfastamento')">&times;</span>
@@ -95,6 +102,7 @@
   </div>
 </div>
 
+<!-- Modal feriado -->
 <div id="modalFeriado" class="modal">
   <div class="modal-content">
     <span class="close" onclick="fecharModal('modalFeriado')">&times;</span>
@@ -106,6 +114,7 @@
   </div>
 </div>
 
+<!-- Modal tarefa -->
 <div id="modalTarefa" class="modal">
   <div class="modal-content">
     <span class="close" onclick="fecharModal('modalTarefa')">&times;</span>
@@ -121,68 +130,12 @@
   </div>
 </div>
 
-<!-- 🚀 Scripts do Firebase - para seu firebase.initializeApp funcionar -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-<!-- Seu script INTEIRO original, igual ao que você mandou -->
 <script>
-
 let equipes = JSON.parse(localStorage.getItem('equipes24x96') || '[]');
 let afastamentos = JSON.parse(localStorage.getItem('afastamentos24x96') || '[]');
 let feriados = JSON.parse(localStorage.getItem('feriados24x96') || '[]');
 let observacoes = JSON.parse(localStorage.getItem('observacoes24x96') || '{}');
 let tarefas = JSON.parse(localStorage.getItem('tarefas24x96') || '[]');
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
-  authDomain: "escala-18337.firebaseapp.com",
-  projectId: "escala-18337",
-  storageBucket: "escala-18337.firebasestorage.app",
-  messagingSenderId: "623332895586",
-  appId: "1:623332895586:web:9a0110499f040f291fda3b",
-  measurementId: "G-TYLP6G611E"
-};
-
-  // Inicializando o Firebase
-  const app = firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();  // Usando Firestore
-
-  // Adicionando dados (exemplo de um formulário)
-  const form = document.getElementById('addDataForm');
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-
-    const name = document.getElementById('name').value;
-    const age = document.getElementById('age').value;
-
-    // Adicionando dados ao Firestore
-    db.collection("usuarios").add({
-      nome: name,
-      idade: age
-    })
-    .then(() => {
-      console.log("Dado adicionado com sucesso!");
-    })
-    .catch((error) => {
-      console.error("Erro ao adicionar dado: ", error);
-    });
-  });
-
-  const userList = document.getElementById('userList');
-
-  // Lendo dados do Firestore
-  db.collection("usuarios").get().then((querySnapshot) => {
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      const listItem = document.createElement('li');
-      listItem.textContent = `Nome: ${data.nome}, Idade: ${data.idade}`;
-      userList.appendChild(listItem);
-    });
-  });
-
-
 
 const meses = [
   'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -437,7 +390,25 @@ function gerarEscala() {
       classes += ' hoje';
     }
 
-    let box = `<div class="${classes}"><div class="data-num">${dia} <button onclick="adicionarNomeExtra('${dataStr}')" title="Adicionar nome extra" style="font-weight:bold; font-size:12px; color:#ff66b2; border:none; background:none; cursor:pointer;">+</button></div>`;
+   //let box = `<div class="${classes}"><div class="data-num">${dia} <button onclick="adicionarNomeExtra('${dataStr}')" title="Adicionar nome extra" style="font-weight:bold; font-size:12px; color:#ff66b2; border:none; background:none; cursor:pointer;">+</button></div>`;
+
+   // pegar a dataInicio da primeira equipe (índice 0)
+const primeiraEquipe = equipes[0];
+let dataInicioPrimeiraEquipe = primeiraEquipe && primeiraEquipe.dataInicio ? new Date(primeiraEquipe.dataInicio) : null;
+
+// Comparar com a data atual (data)
+let isDiaInicioPrimeiraEquipe = false;
+if (dataInicioPrimeiraEquipe) {
+  isDiaInicioPrimeiraEquipe = (
+    data.getDate() === dataInicioPrimeiraEquipe.getDate() &&
+    data.getMonth() === dataInicioPrimeiraEquipe.getMonth() &&
+    data.getFullYear() === dataInicioPrimeiraEquipe.getFullYear()
+  );
+}
+
+let classeDiaNum = isDiaInicioPrimeiraEquipe ? 'data-num destaque-primeira-equipe' : 'data-num';
+
+let box = `<div class="${classes}"><div class="${classeDiaNum}">${dia} <button onclick="adicionarNomeExtra('${dataStr}')" title="Adicionar nome extra" style="font-weight:bold; font-size:12px; color:#ff66b2; border:none; background:none; cursor:pointer;">+</button></div>`;
 
     eqs.forEach(eq => {
       if (!eq.dataInicio) return;
@@ -626,22 +597,3 @@ window.onload = iniciar;
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
