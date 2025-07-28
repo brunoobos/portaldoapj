@@ -3,36 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Escala 24x96 - Admin Completo</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
-    h1 { color: #333; }
-    button { margin: 5px; padding: 10px; }
-    #resultado { margin-top: 20px; background: #fff; padding: 10px; border: 1px solid #ccc; }
-  </style>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
-      authDomain: "escala-18337.firebaseapp.com",
-      projectId: "escala-18337",
-      storageBucket: "escala-18337.firebasestorage.app",
-      messagingSenderId: "623332895586",
-      appId: "1:623332895586:web:7070007bc7accfea1fda3b",
-      measurementId: "G-RLP96MKFRR"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-  </script>
+  <title>Escala 24x96</title>
 </head>
 <body>
   <h1>Escala 24x96</h1>
 
-  <select id="selectMes"></select>
-  <select id="selectAno"></select>
+  <div>
+    <label for="selectMes">Mês:</label>
+    <select id="selectMes"></select>
+    <label for="selectAno">Ano:</label>
+    <select id="selectAno"></select>
+  </div>
 
   <div>
     <button id="btnAddEquipe">Adicionar Equipe</button>
@@ -45,114 +26,88 @@
     <button id="btnGerarEscala">Gerar Escala</button>
   </div>
 
+  <!-- ✅ Elemento onde as equipes são renderizadas -->
+  <div id="equipes-container"></div>
+
   <div id="resultado"></div>
 
-  <!-- Modal afastamento -->
-<div id="modalAfastamento" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="fecharModal('modalAfastamento')">&times;</span>
-    <h3>Cadastrar Afastamento</h3>
-    <label>Equipe:</label>
-    <select id="modalEquipe"></select>
-    <label>Membro:</label>
-    <select id="modalMembro">
-      <option value="F">Fixo</option>
-      <option value="R0">Rotativo 1</option>
-      <option value="R1">Rotativo 2</option>
-      <option value="R2">Rotativo 3</option>
-    </select>
-    <label>Tipo:</label>
-    <select id="modalTipo">
-      <option value="FERIAS">Férias</option>
-      <option value="LICENCA">Licença</option>
-      <option value="COMPENSACAO">Compensação</option>
-    </select>
-    <label>Data início:</label>
-    <input type="date" id="modalInicio" />
-    <label>Data fim:</label>
-    <input type="date" id="modalFim" />
-    <br /><br />
-    <button onclick="salvarAfastamento()">Salvar</button>
-  </div>
-</div>
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, setDoc, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-<!-- Modal feriado -->
-<div id="modalFeriado" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="fecharModal('modalFeriado')">&times;</span>
-    <h3>Cadastrar Feriado</h3>
-    <label>Data do Feriado:</label>
-    <input type="date" id="feriadoData" />
-    <br /><br />
-    <button onclick="salvarFeriado()">Salvar Feriado</button>
-  </div>
-</div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
+      authDomain: "escala-18337.firebaseapp.com",
+      projectId: "escala-18337",
+      storageBucket: "escala-18337.firebasestorage.app",
+      messagingSenderId: "623332895586",
+      appId: "1:623332895586:web:7070007bc7accfea1fda3b",
+      measurementId: "G-RLP96MKFRR"
+    };
 
-<!-- Modal tarefa -->
-<div id="modalTarefa" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="fecharModal('modalTarefa')">&times;</span>
-    <h3>Adicionar Tarefa</h3>
-    <label>Nome da Pessoa:</label>
-    <input type="text" id="inputNomeTarefa" />
-    <label>Data:</label>
-    <input type="date" id="inputDataTarefa" />
-    <label>Descrição:</label>
-    <input type="text" id="inputDescricaoTarefa" />
-    <br /><br />
-    <button onclick="salvarNovaTarefa()">Salvar</button>
-  </div>
-</div>
-
-  <script>
-    const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
     let equipes = [];
-    let tarefas = [];
-    let feriados = [];
-    let afastamentos = [];
+
+    const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+    function renderEquipes() {
+      const container = document.getElementById("equipes-container");
+      container.innerHTML = "";
+      equipes.forEach((equipe, index) => {
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <h4>Equipe ${index + 1}</h4>
+          <input placeholder="Nome" value="${equipe.nome}" onchange="editarEquipe(${index}, 'nome', this.value)" />
+          <input type="date" value="${equipe.dataInicio}" onchange="editarEquipe(${index}, 'dataInicio', this.value)" />
+          <input placeholder="Fixo" value="${equipe.fixo}" onchange="editarEquipe(${index}, 'fixo', this.value)" />
+          <input placeholder="Rotativo 1" value="${equipe.rotativos[0]}" onchange="editarRotativo(${index}, 0, this.value)" />
+          <input placeholder="Rotativo 2" value="${equipe.rotativos[1]}" onchange="editarRotativo(${index}, 1, this.value)" />
+          <input placeholder="Rotativo 3" value="${equipe.rotativos[2]}" onchange="editarRotativo(${index}, 2, this.value)" />
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    window.editarEquipe = function (index, campo, valor) {
+      equipes[index][campo] = valor;
+    }
+
+    window.editarRotativo = function (index, pos, valor) {
+      equipes[index].rotativos[pos] = valor;
+    }
 
     async function salvarEquipes() {
-      await db.collection("dados").doc("equipes").set({ equipes });
+      const ref = collection(db, "equipes");
+      const snapshot = await getDocs(ref);
+      snapshot.forEach(docSnap => deleteDoc(doc(db, "equipes", docSnap.id))); // Limpa antes de salvar
+
+      for (let i = 0; i < equipes.length; i++) {
+        await addDoc(ref, equipes[i]);
+      }
     }
 
-    async function carregarEquipes() {
-      const doc = await db.collection("dados").doc("equipes").get();
-      if (doc.exists) equipes = doc.data().equipes || [];
-    }
-
-    async function salvarTarefas() {
-      await db.collection("dados").doc("tarefas").set({ tarefas });
-    }
-
-    async function carregarTarefas() {
-      const doc = await db.collection("dados").doc("tarefas").get();
-      if (doc.exists) tarefas = doc.data().tarefas || [];
-    }
-
-    async function salvarFeriados() {
-      await db.collection("dados").doc("feriados").set({ feriados });
-    }
-
-    async function carregarFeriados() {
-      const doc = await db.collection("dados").doc("feriados").get();
-      if (doc.exists) feriados = doc.data().feriados || [];
-    }
-
-    async function salvarAfastamentos() {
-      await db.collection("dados").doc("afastamentos").set({ afastamentos });
-    }
-
-    async function carregarAfastamentos() {
-      const doc = await db.collection("dados").doc("afastamentos").get();
-      if (doc.exists) afastamentos = doc.data().afastamentos || [];
+    async function visualizarEquipes() {
+      const ref = collection(db, "equipes");
+      const snapshot = await getDocs(ref);
+      equipes = [];
+      snapshot.forEach(docSnap => equipes.push(docSnap.data()));
+      renderEquipes();
     }
 
     async function excluirEquipe() {
-      if (!confirm("Tem certeza que deseja excluir todas as equipes?")) return;
+      const ref = collection(db, "equipes");
+      const snapshot = await getDocs(ref);
+      snapshot.forEach(docSnap => deleteDoc(doc(db, "equipes", docSnap.id)));
       equipes = [];
-      await salvarEquipes();
       renderEquipes();
+    }
+
+    function gerarEscala() {
+      document.getElementById("resultado").innerText = "Escala gerada!";
     }
 
     function preencherMesAno() {
@@ -184,83 +139,27 @@
       alert('Equipes salvas com sucesso!');
     };
 
-    document.getElementById('btnVisualizar').onclick = () => visualizarEquipes();
-    document.getElementById('btnExcluir').onclick = () => excluirEquipe();
-
-    document.getElementById('btnAfastamentos').onclick = () => {
-      if (equipes.length === 0) return alert('Cadastre equipes antes de cadastrar afastamentos.');
-      abrirModal('modalAfastamento');
+    document.getElementById('btnVisualizar').onclick = async () => {
+      await visualizarEquipes();
     };
 
-    document.getElementById('btnFeriados').onclick = () => abrirModal('modalFeriado');
+    document.getElementById('btnExcluir').onclick = async () => {
+      await excluirEquipe();
+    };
+
     document.getElementById('btnGerarEscala').onclick = () => {
       if (equipes.length === 0) return alert('Cadastre equipes antes de gerar escala.');
       gerarEscala();
     };
-    document.getElementById('btnAddTarefa').onclick = () => abrirModal('modalTarefa');
 
-    function salvarNovaTarefa() {
-      let nome = document.getElementById('inputNomeTarefa').value.trim();
-      let data = document.getElementById('inputDataTarefa').value;
-      let descricao = document.getElementById('inputDescricaoTarefa').value.trim();
-      if (!nome || !data || !descricao) return alert('Preencha todos os campos da tarefa.');
-      tarefas.push({ nome, data, descricao });
-      salvarTarefas();
-      fecharModal('modalTarefa');
-      gerarEscala();
-    }
-
-   function renderEquipes() {
-  const container = document.getElementById('equipes-container');
-  container.innerHTML = '';
-  equipes.forEach((eq, i) => {
-    eq.rotativos = eq.rotativos || ['', '', ''];
-    container.innerHTML += `
-      <div class="section">
-        <h3>Equipe ${i + 1}</h3>
-        <label>Nome:</label><input type="text" value="${eq.nome || ''}" onchange="equipes[${i}].nome=this.value" /><br/>
-        <label>Data Início:</label><input type="date" value="${eq.dataInicio || ''}" onchange="equipes[${i}].dataInicio=this.value" /><br/>
-        <label>Fixo:</label><input type="text" value="${eq.fixo || ''}" onchange="equipes[${i}].fixo=this.value" /><br/>
-        ${eq.rotativos.map((r,j) => `<label>R${j+1}:</label><input type="text" value="${r || ''}" onchange="equipes[${i}].rotativos[${j}]=this.value" /><br/>`).join('')}
-      </div>`;
-  });
-  atualizarSelectEquipe();
-}
-
-    function visualizarEquipes() {
-      const res = document.getElementById('resultado');
-      res.innerHTML = JSON.stringify(equipes, null, 2);
-    }
-
-    function abrirModal(id) {
-      // Aqui você coloca seu código de exibição de modal
-    }
-
-    function fecharModal(id) {
-      // Aqui você fecha seu modal
-    }
-
-    function gerarEscala() {
-      // Coloque sua lógica aqui
-    }
-
-    function atualizarSelectEquipe() {
-      // Lógica opcional, dependendo do seu layout
-    }
-
-    window.onload = async function() {
+    window.onload = () => {
       preencherMesAno();
-      await carregarEquipes();
-      await carregarTarefas();
-      await carregarFeriados();
-      await carregarAfastamentos();
-      renderEquipes();
-      atualizarSelectEquipe();
-      gerarEscala();
+      visualizarEquipes(); // carrega dados automaticamente ao abrir
     };
   </script>
 </body>
 </html>
+
 
 
 
