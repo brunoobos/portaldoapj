@@ -131,6 +131,42 @@
 </div>
 
 <script>
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Importa módulos do Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
+      authDomain: "escala-18337.firebaseapp.com",
+      projectId: "escala-18337",
+      storageBucket: "escala-18337.firebasestorage.app",
+      messagingSenderId: "623332895586",
+      appId: "1:623332895586:web:7070007bc7accfea1fda3b",
+      measurementId: "G-RLP96MKFRR"
+    };
+
+    // Inicializa Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Cadastrar Equipe
+    document.getElementById("formEquipe").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await addDoc(collection(db, "equipes"), {
+        nome: document.getElementById("nome").value,
+        data_inicio: document.getElementById("dataInicio").value,
+        fixo: document.getElementById("fixo").value,
+        rotativo0: document.getElementById("rotativo0").value,
+        rotativo1: document.getElementById("rotativo1").value,
+        rotativo2: document.getElementById("rotativo2").value
+      });
+      alert("Equipe cadastrada!");
+      e.target.reset();
+    });
+
 let equipes = JSON.parse(localStorage.getItem('equipes24x96') || '[]');
 let afastamentos = JSON.parse(localStorage.getItem('afastamentos24x96') || '[]');
 let feriados = JSON.parse(localStorage.getItem('feriados24x96') || '[]');
