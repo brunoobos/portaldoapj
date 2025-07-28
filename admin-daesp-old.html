@@ -130,12 +130,56 @@
   </div>
 </div>
 
-<script>
-let equipes = JSON.parse(localStorage.getItem('equipes24x96') || '[]');
-let afastamentos = JSON.parse(localStorage.getItem('afastamentos24x96') || '[]');
-let feriados = JSON.parse(localStorage.getItem('feriados24x96') || '[]');
-let observacoes = JSON.parse(localStorage.getItem('observacoes24x96') || '{}');
-let tarefas = JSON.parse(localStorage.getItem('tarefas24x96') || '[]');
+  <script type="module">
+  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
+    authDomain: "escala-18337.firebaseapp.com",
+    projectId: "escala-18337",
+    storageBucket: "escala-18337.firebasestorage.app",
+    messagingSenderId: "623332895586",
+    appId: "1:623332895586:web:7070007bc7accfea1fda3b",
+    measurementId: "G-RLP96MKFRR"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Salvar afastamento no Firebase
+  window.salvarAfastamento = async function () {
+    const equipe = document.getElementById('selectEquipeAfastamento').value;
+    const inicio = document.getElementById('inputDataInicioAfastamento').value;
+    const fim = document.getElementById('inputDataFimAfastamento').value;
+    const motivo = document.getElementById('inputMotivoAfastamento').value.trim();
+
+    if (!equipe || !inicio || !fim || !motivo) {
+      alert('Preencha todos os campos do afastamento.');
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "afastamentos"), {
+        equipe,
+        inicio,
+        fim,
+        motivo
+      });
+      alert('Afastamento salvo com sucesso no Firebase!');
+      fecharModal('modalAfastamento');
+    } catch (e) {
+      console.error("Erro ao salvar afastamento:", e);
+      alert('Erro ao salvar afastamento.');
+    }
+  };
+
+
+//let equipes = JSON.parse(localStorage.getItem('equipes24x96') || '[]');
+//let afastamentos = JSON.parse(localStorage.getItem('afastamentos24x96') || '[]');
+//let feriados = JSON.parse(localStorage.getItem('feriados24x96') || '[]');
+//let observacoes = JSON.parse(localStorage.getItem('observacoes24x96') || '{}');
+//let tarefas = JSON.parse(localStorage.getItem('tarefas24x96') || '[]');
 
 const meses = [
   'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
