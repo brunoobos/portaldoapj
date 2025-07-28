@@ -5,140 +5,96 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Escala 24x96 - Admin</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background-color: #f0f0f0;
-    }
-    .container {
-      max-width: 800px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-    }
-    h1 {
-      text-align: center;
-    }
-    .campo {
-      margin-bottom: 10px;
-    }
-    .campo label {
-      display: block;
-      margin-bottom: 5px;
-    }
-    .campo input,
-    .campo textarea,
-    .campo select {
-      width: 100%;
-      padding: 8px;
-      box-sizing: border-box;
-    }
-    .botoes button {
-      margin: 5px;
-    }
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgba(0,0,0,0.4);
-    }
-    .modal-content {
-      background-color: #fff;
-      margin: 10% auto;
-      padding: 20px;
-      width: 90%;
-      max-width: 500px;
-      border-radius: 10px;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
+    h1 { color: #333; }
+    input, button, select { margin: 5px 0; padding: 5px; }
+    .modal { display: none; background: #fff; padding: 15px; border: 1px solid #ccc; position: absolute; top: 100px; left: 50%; transform: translateX(-50%); }
+    .modal input { width: 100%; }
   </style>
 </head>
 <body>
-<div class="container">
-  <h1>Cadastro de Escala</h1>
 
-  <div class="botoes">
-    <button id="btnFeriados">Cadastrar Feriado</button>
-  </div>
+  <h1>Cadastro de Feriados</h1>
+  <button id="btnFeriados">Cadastrar Feriado</button>
 
   <div id="modalFeriado" class="modal">
-    <div class="modal-content">
-      <h2>Cadastro de Feriado</h2>
-      <div class="campo">
-        <label for="inputDataFeriado">Data</label>
-        <input type="date" id="inputDataFeriado" />
-      </div>
-      <div class="campo">
-        <label for="inputDescricaoFeriado">Descrição</label>
-        <input type="text" id="inputDescricaoFeriado" />
-      </div>
-      <div class="botoes">
-        <button id="btnSalvarFeriado">Salvar</button>
-        <button onclick="fecharModal('modalFeriado')">Cancelar</button>
-      </div>
-    </div>
+    <h3>Novo Feriado</h3>
+    <input type="text" id="inputNomeFeriado" placeholder="Nome do feriado" />
+    <input type="date" id="inputDataFeriado" />
+    <button onclick="salvarFeriado()">Salvar</button>
+    <button onclick="fecharModal('modalFeriado')">Fechar</button>
   </div>
-</div>
 
-<script>
-  function abrirModal(id) {
-    document.getElementById(id).style.display = 'block';
-  }
+  <ul id="listaFeriados"></ul>
 
-  function fecharModal(id) {
-    document.getElementById(id).style.display = 'none';
-  }
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-  document.getElementById('btnFeriados').onclick = () => {
-    abrirModal('modalFeriado');
-  };
-</script>
+  <script>
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
+      authDomain: "escala-18337.firebaseapp.com",
+      projectId: "escala-18337",
+      storageBucket: "escala-18337.firebasestorage.app",
+      messagingSenderId: "623332895586",
+      appId: "1:623332895586:web:7070007bc7accfea1fda3b",
+      measurementId: "G-RLP96MKFRR"
+    };
 
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
-    authDomain: "escala-18337.firebaseapp.com",
-    projectId: "escala-18337",
-    storageBucket: "escala-18337.appspot.com",
-    messagingSenderId: "623332895586",
-    appId: "1:623332895586:web:7070007bc7accfea1fda3b",
-    measurementId: "G-RLP96MKFRR"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  document.getElementById('btnSalvarFeriado').onclick = async () => {
-    const data = document.getElementById('inputDataFeriado').value;
-    const descricao = document.getElementById('inputDescricaoFeriado').value.trim();
-
-    if (!data || !descricao) {
-      alert('Preencha todos os campos do feriado.');
-      return;
+    // Abrir modal
+    function abrirModal(id) {
+      document.getElementById(id).style.display = 'block';
     }
 
-    try {
-      await addDoc(collection(db, "feriados"), { data, descricao });
-      alert('Feriado salvo no Firebase com sucesso!');
-      document.getElementById('inputDataFeriado').value = '';
-      document.getElementById('inputDescricaoFeriado').value = '';
-      fecharModal('modalFeriado');
-    } catch (e) {
-      console.error("Erro ao salvar no Firebase:", e);
-      alert("Erro ao salvar o feriado.");
+    // Fechar modal
+    function fecharModal(id) {
+      document.getElementById(id).style.display = 'none';
     }
-  };
-</script>
+
+    // Botão abre modal
+    document.getElementById('btnFeriados').onclick = () => {
+      abrirModal('modalFeriado');
+    };
+
+    // Salvar feriado no Firebase
+    async function salvarFeriado() {
+      const nome = document.getElementById('inputNomeFeriado').value.trim();
+      const data = document.getElementById('inputDataFeriado').value;
+      if (!nome || !data) return alert('Preencha todos os campos.');
+      try {
+        await db.collection("feriados").add({ nome, data });
+        alert("Feriado salvo com sucesso!");
+        fecharModal('modalFeriado');
+        listarFeriados(); // Atualiza lista após salvar
+      } catch (e) {
+        alert("Erro ao salvar: " + e);
+      }
+    }
+
+    // Listar feriados do Firebase
+    async function listarFeriados() {
+      const lista = document.getElementById('listaFeriados');
+      lista.innerHTML = '';
+      const snapshot = await db.collection("feriados").orderBy("data").get();
+      snapshot.forEach(doc => {
+        const item = doc.data();
+        const li = document.createElement('li');
+        li.textContent = `${item.data} - ${item.nome}`;
+        lista.appendChild(li);
+      });
+    }
+
+    // Carregar feriados ao iniciar
+    window.onload = () => {
+      listarFeriados();
+    };
+  </script>
 
 </body>
 </html>
-
