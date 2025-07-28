@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Teste Firebase com GitHub + Netlify</title>
+  <!-- Firebase SDKs compatíveis com HTML puro -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <h2>Testar Firebase - Inserir Equipe</h2>
+  <input type="text" id="nome" placeholder="Nome da equipe" />
+  <button onclick="salvar()">Salvar</button>
+
+  <script>
+    // Seu firebaseConfig
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
+      authDomain: "escala-18337.firebaseapp.com",
+      projectId: "escala-18337",
+      storageBucket: "escala-18337.firebasestorage.app",
+      messagingSenderId: "623332895586",
+      appId: "1:623332895586:web:7070007bc7accfea1fda3b",
+      measurementId: "G-RLP96MKFRR"
+    };
+
+    // Inicializa Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Função para salvar dados no Firestore
+    function salvar() {
+      const nome = document.getElementById("nome").value;
+      if (!nome) return alert("Informe um nome.");
+
+      db.collection("equipes").add({ nome: nome })
+        .then(() => {
+          alert("Equipe salva com sucesso!");
+          document.getElementById("nome").value = "";
+        })
+        .catch((error) => {
+          console.error("Erro ao salvar:", error);
+          alert("Erro ao salvar: " + error.message);
+        });
+    }
+  </script>
+</body>
+</html>
