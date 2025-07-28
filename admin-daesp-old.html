@@ -1,595 +1,114 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Escala 24x96 - Admin Completo</title>
-<style>
-  body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
-  h1 { text-align: center; }
-  .section { background: #fff; border-radius: 5px; padding: 15px; margin-bottom: 20px; box-shadow: 0 0 5px #ccc; }
-  button { padding: 8px 15px; margin: 5px; cursor: pointer; border-radius: 4px; border: none; }
-  button#btnAddEquipe { background: #28a745; color: white; }
-  button#btnSalvar { background: #007bff; color: white; }
-  button#btnVisualizar { background: #ffc107; }
-  button#btnExcluir { background: #dc3545; color: white; }
-  button#btnGerarEscala { background: #17a2b8; color: white; }
-  button#btnAfastamentos { background: #6f42c1; color: white; }
-  button#btnFeriados { background: #6c757d; color: white; }
-  button#btnAddTarefa { background: #28a745; color: white; margin-bottom: 10px; }
-  button#btnExcluirAfastamento { background:#dc3545; color:white; margin-left:5px; }
-  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 20px; }
-  .calendar-day { border: 1px solid #ccc; border-radius: 4px; padding: 5px; min-height: 90px; font-size: 12px; background: #fff; position: relative; }
-  .calendar-day.feriado { background-color: #b0b0b0 !important; color: #fff; }
-  .calendar-day.hoje { background-color: yellow !important; color: black; }
-  .calendar-day .data-num { font-weight: bold; }
-  .work { margin: 2px 0; padding: 2px 4px; border-radius: 3px; cursor: pointer; }
-  .work.extra-name { background: #ff66b2; color: white; } /* cor rosa para nomes extras */
-  .afastamento { margin: 2px 0; padding: 2px 4px; border-radius: 3px; font-size: 11px; color: #fff; }
-  .ferias { background: #ffc107; color: #333; }
-  .licenca { background: #dc3545; }
-  .compensacao { background: #6f42c1; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Escala 24x96 - Admin</title>
+  <script type="module">
+    // Importa os módulos Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; 
-           background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
-  .modal-content { background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; position: relative; }
-  .modal-content label { display: block; margin: 10px 0 4px; }
-  .modal-content input, .modal-content select { width: 100%; padding: 6px; box-sizing: border-box; }
-  .close { position: absolute; top: 10px; right: 15px; font-size: 20px; cursor: pointer; }
-  .destaque-primeira-equipe { color: red; font-weight: bold; }
-</style>
-<!-- Firebase App (the core Firebase SDK) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<!-- Firebase Realtime Database -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
+      authDomain: "escala-18337.firebaseapp.com",
+      projectId: "escala-18337",
+      storageBucket: "escala-18337.firebasestorage.app",
+      messagingSenderId: "623332895586",
+      appId: "1:623332895586:web:7070007bc7accfea1fda3b",
+      measurementId: "G-RLP96MKFRR"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.salvarEquipe = async () => {
+      const nome = document.getElementById("nome").value;
+      const data_inicio = document.getElementById("data_inicio").value;
+      const fixo = document.getElementById("fixo").value;
+      const rotativo0 = document.getElementById("rotativo0").value;
+      const rotativo1 = document.getElementById("rotativo1").value;
+      const rotativo2 = document.getElementById("rotativo2").value;
+
+      try {
+        await addDoc(collection(db, "equipes"), {
+          nome, data_inicio, fixo, rotativo0, rotativo1, rotativo2
+        });
+        alert("Equipe salva com sucesso!");
+      } catch (e) {
+        alert("Erro ao salvar equipe: " + e);
+      }
+    };
+
+    window.salvarFeriado = async () => {
+      const data = document.getElementById("feriadoData").value;
+      const descricao = document.getElementById("feriadoDescricao").value;
+
+      try {
+        await addDoc(collection(db, "feriados"), {
+          data, descricao
+        });
+        alert("Feriado salvo com sucesso!");
+      } catch (e) {
+        alert("Erro ao salvar feriado: " + e);
+      }
+    };
+
+    window.salvarAfastamento = async () => {
+      const nome = document.getElementById("afastamentoNome").value;
+      const data = document.getElementById("afastamentoData").value;
+      const motivo = document.getElementById("afastamentoMotivo").value;
+
+      try {
+        await addDoc(collection(db, "afastamentos"), {
+          nome, data, motivo
+        });
+        alert("Afastamento salvo com sucesso!");
+      } catch (e) {
+        alert("Erro ao salvar afastamento: " + e);
+      }
+    };
+
+    window.salvarObservacao = async () => {
+      const observacao = document.getElementById("observacaoTexto").value;
+
+      try {
+        await addDoc(collection(db, "observacoes"), {
+          texto: observacao,
+          data: new Date().toISOString()
+        });
+        alert("Observação salva com sucesso!");
+      } catch (e) {
+        alert("Erro ao salvar observação: " + e);
+      }
+    };
+  </script>
 </head>
 <body>
-
-<h1>Administração da Escala 24x96</h1>
-
-<div class="section" id="equipes-container"></div>
-
-<button id="btnAddEquipe">Adicionar Equipe</button>
-<button id="btnSalvar">Salvar Equipes</button>
-<button id="btnVisualizar">Visualizar Equipes</button>
-<button id="btnExcluir">Excluir Equipe</button>
-<button id="btnAfastamentos">Cadastrar Afastamentos</button>
-<button id="btnExcluirAfastamento">Excluir Afastamento</button>
-<button id="btnFeriados">Cadastrar Feriados</button>
-<button id="btnExcluirFeriado">Excluir Feriado</button>
-
-<div class="section">
-  <h2>Gerar Relatório da Escala</h2>
-  <label for="selectEquipe">Equipe:</label>
-  <select id="selectEquipe"><option value="-1">Todas as equipes</option></select><br/>
-  <label for="selectMes">Mês:</label>
-  <select id="selectMes"></select><br/>
-  <label for="selectAno">Ano:</label>
-  <select id="selectAno"></select><br/>
-  <button id="btnGerarEscala">Gerar Escala Mensal</button>
-</div>
-
-<button id="btnAddTarefa">Adicionar Tarefa</button>
-
-<div id="relatorio"></div>
-
-<!-- Modal afastamento -->
-<div id="modalAfastamento" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="fecharModal('modalAfastamento')">&times;</span>
-    <h3>Cadastrar Afastamento</h3>
-    <label>Equipe:</label>
-    <select id="modalEquipe"></select>
-    <label>Membro:</label>
-    <select id="modalMembro">
-      <option value="F">Fixo</option>
-      <option value="R0">Rotativo 1</option>
-      <option value="R1">Rotativo 2</option>
-      <option value="R2">Rotativo 3</option>
-    </select>
-    <label>Tipo:</label>
-    <select id="modalTipo">
-      <option value="FERIAS">Férias</option>
-      <option value="LICENCA">Licença</option>
-      <option value="COMPENSACAO">Compensação</option>
-    </select>
-    <label>Data início:</label>
-    <input type="date" id="modalInicio" />
-    <label>Data fim:</label>
-    <input type="date" id="modalFim" />
-    <br /><br />
-    <button onclick="salvarAfastamento()">Salvar</button>
-  </div>
-</div>
-
-<!-- Modal feriado -->
-<div id="modalFeriado" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="fecharModal('modalFeriado')">&times;</span>
-    <h3>Cadastrar Feriado</h3>
-    <label>Data do Feriado:</label>
-    <input type="date" id="feriadoData" />
-    <br /><br />
-    <button onclick="salvarFeriado()">Salvar Feriado</button>
-  </div>
-</div>
-
-<!-- Modal tarefa -->
-<div id="modalTarefa" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="fecharModal('modalTarefa')">&times;</span>
-    <h3>Adicionar Tarefa</h3>
-    <label>Nome da Pessoa:</label>
-    <input type="text" id="inputNomeTarefa" />
-    <label>Data:</label>
-    <input type="date" id="inputDataTarefa" />
-    <label>Descrição:</label>
-    <input type="text" id="inputDescricaoTarefa" />
-    <br /><br />
-    <button onclick="salvarNovaTarefa()">Salvar</button>
-  </div>
-</div>
-
-<script>
-// ===== Configuração do Firebase =====
-const firebaseConfig = {
-  apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
-  authDomain: "escala-18337.firebaseapp.com",
-  projectId: "escala-18337",
-  storageBucket: "escala-18337.firebasestorage.app",
-  messagingSenderId: "623332895586",
-  appId: "1:623332895586:web:7070007bc7accfea1fda3b",
-  measurementId: "G-RLP96MKFRR"
-};
-
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
-
-// ===== Dados locais =====
-let equipes = [];
-let afastamentos = [];
-let feriados = [];
-let observacoes = {};
-let tarefas = [];
-
-const meses = [
-  'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
-];
-
-// ===== Funções para salvar e carregar dados no Firebase =====
-
-function salvarFirebase(caminho, dados) {
-  return database.ref(caminho).set(dados);
-}
-
-async function carregarFirebase(caminho) {
-  const snapshot = await database.ref(caminho).get();
-  return snapshot.exists() ? snapshot.val() : null;
-}
-
-async function salvarEquipesFirebase() {
-  await salvarFirebase('escala/equipes', equipes);
-}
-async function salvarAfastamentosFirebase() {
-  await salvarFirebase('escala/afastamentos', afastamentos);
-}
-async function salvarFeriadosFirebase() {
-  await salvarFirebase('escala/feriados', feriados);
-}
-async function salvarTarefasFirebase() {
-  await salvarFirebase('escala/tarefas', tarefas);
-}
-async function salvarObservacoesFirebase() {
-  await salvarFirebase('escala/observacoes', observacoes);
-}
-
-async function carregarDadosFirebase() {
-  const eqs = await carregarFirebase('escala/equipes');
-  if (eqs) equipes = eqs;
-
-  const afs = await carregarFirebase('escala/afastamentos');
-  if (afs) afastamentos = afs;
-
-  const fer = await carregarFirebase('escala/feriados');
-  if (fer) feriados = fer;
-
-  const tar = await carregarFirebase('escala/tarefas');
-  if (tar) tarefas = tar;
-
-  const obs = await carregarFirebase('escala/observacoes');
-  if (obs) observacoes = obs;
-}
-
-// ===== Funções para salvar localStorage (backup local) =====
-function salvarEquipesLocal() {
-  localStorage.setItem('equipes24x96', JSON.stringify(equipes));
-}
-function salvarAfastamentosLocal() {
-  localStorage.setItem('afastamentos24x96', JSON.stringify(afastamentos));
-}
-function salvarFeriadosLocal() {
-  localStorage.setItem('feriados24x96', JSON.stringify(feriados));
-}
-function salvarTarefasLocal() {
-  localStorage.setItem('tarefas24x96', JSON.stringify(tarefas));
-}
-function salvarObservacoesLocal() {
-  localStorage.setItem('observacoes24x96', JSON.stringify(observacoes));
-}
-
-// ===== Renderização e manipulação dos dados =====
-
-function salvarEquipes() {
-  salvarEquipesLocal();
-  salvarEquipesFirebase();
-  alert('Equipes salvas no Firebase!');
-}
-
-function salvarAfastamentos() {
-  salvarAfastamentosLocal();
-  salvarAfastamentosFirebase();
-}
-
-function salvarFeriados() {
-  salvarFeriadosLocal();
-  salvarFeriadosFirebase();
-}
-
-function salvarTarefas() {
-  salvarTarefasLocal();
-  salvarTarefasFirebase();
-}
-
-function salvarObservacoes() {
-  salvarObservacoesLocal();
-  salvarObservacoesFirebase();
-}
-
-function renderEquipes() {
-  const container = document.getElementById('equipes-container');
-  container.innerHTML = '';
-  equipes.forEach((eq, i) => {
-    eq.rotativos = eq.rotativos || ['', '', ''];
-    container.innerHTML += `
-      <div class="section">
-        <h3>Equipe ${i + 1}</h3>
-        <label>Nome:</label><input type="text" value="${eq.nome || ''}" onchange="equipes[${i}].nome=this.value" /><br/>
-        <label>Data Início:</label><input type="date" value="${eq.dataInicio || ''}" onchange="equipes[${i}].dataInicio=this.value" /><br/>
-        <label>Fixo:</label><input type="text" value="${eq.fixo || ''}" onchange="equipes[${i}].fixo=this.value" /><br/>
-        ${eq.rotativos.map((r,j) => `<label>R${j+1}:</label><input type="text" value="${r || ''}" onchange="equipes[${i}].rotativos[${j}]=this.value" /><br/>`).join('')}
-      </div>`;
-  });
-  atualizarSelectEquipe();
-}
-
-function atualizarSelectEquipe() {
-  const sel = document.getElementById('selectEquipe');
-  sel.innerHTML = '<option value="-1">Todas as equipes</option>';
-  equipes.forEach((eq, i) => sel.innerHTML += `<option value="${i}">${eq.nome || 'Equipe ' + (i + 1)}</option>`);
-  atualizarModalEquipe();
-}
-
-function atualizarModalEquipe() {
-  const sel = document.getElementById('modalEquipe');
-  if (!sel) return;
-  sel.innerHTML = '';
-  equipes.forEach((eq, i) => sel.innerHTML += `<option value="${i}">${eq.nome}</option>`);
-}
-
-function visualizarEquipes() {
-  alert(equipes.map((eq, i) => `Equipe ${i + 1}: ${eq.nome}, Fixo: ${eq.fixo}, Rotativos: ${eq.rotativos.join(', ')}`).join('\n\n'));
-}
-
-function excluirEquipe() {
-  let idx = prompt('Digite o número da equipe para excluir (começando em 0):');
-  idx = parseInt(idx);
-  if (!isNaN(idx) && idx >= 0 && idx < equipes.length) {
-    if (confirm(`Excluir equipe ${equipes[idx].nome}?`)) {
-      equipes.splice(idx, 1);
-      salvarEquipes();
-      renderEquipes();
-    }
-  } else {
-    alert('Índice inválido.');
-  }
-}
-
-function abrirModal(id) {
-  document.getElementById(id).style.display = 'flex';
-}
-function fecharModal(id) {
-  document.getElementById(id).style.display = 'none';
-}
-
-function salvarAfastamento() {
-  let eq = parseInt(document.getElementById('modalEquipe').value);
-  let membro = document.getElementById('modalMembro').value;
-  let tipo = document.getElementById('modalTipo').value;
-  let inicio = document.getElementById('modalInicio').value;
-  let fim = document.getElementById('modalFim').value;
-  if (!inicio || !fim) return alert('Preencha datas.');
-  afastamentos.push({ equipe: eq, membro, tipo, inicio, fim });
-  salvarAfastamentos();
-  fecharModal('modalAfastamento');
-  gerarEscala();
-}
-
-function salvarFeriado() {
-  let data = document.getElementById('feriadoData').value;
-  if (!data) return alert('Selecione a data do feriado.');
-  if (!feriados.includes(data)) {
-    feriados.push(data);
-    salvarFeriados();
-  } else {
-    alert('Feriado já cadastrado.');
-  }
-  fecharModal('modalFeriado');
-  gerarEscala();
-}
-
-function excluirAfastamento() {
-  if (afastamentos.length === 0) {
-    alert('Nenhum afastamento cadastrado.');
-    return;
-  }
-
-  let lista = 'Afastamentos cadastrados:\n';
-  afastamentos.forEach((af, i) => {
-    let equipeNome = equipes[af.equipe]?.nome || 'Equipe desconhecida';
-    let membroNome =
-      af.membro === 'F'
-        ? equipes[af.equipe]?.fixo || 'Fixo desconhecido'
-        : equipes[af.equipe]?.rotativos[parseInt(af.membro[1])] || 'Rotativo desconhecido';
-
-    lista += `${i}: ${equipeNome} - ${membroNome} (${af.tipo}) de ${af.inicio} até ${af.fim}\n`;
-  });
-
-  let idx = prompt(lista + '\nDigite o número do afastamento que deseja excluir:');
-  idx = parseInt(idx);
-  if (!isNaN(idx) && idx >= 0 && idx < afastamentos.length) {
-    if (confirm(`Confirma excluir o afastamento:\n${lista.split('\n')[idx + 1]}`)) {
-      afastamentos.splice(idx, 1);
-      salvarAfastamentos();
-      alert('Afastamento excluído!');
-      gerarEscala();
-    }
-  } else {
-    alert('Índice inválido.');
-  }
-}
-
-document.getElementById('btnExcluirAfastamento').onclick = excluirAfastamento;
-
-document.getElementById('btnExcluirFeriado').onclick = () => {
-  if (feriados.length === 0) return alert('Nenhum feriado cadastrado.');
-  let lista = 'Feriados cadastrados:\n';
-  feriados.forEach((f, i) => lista += `${i}: ${f}\n`);
-  let idx = prompt(lista + '\nDigite o número do feriado a excluir:');
-  idx = parseInt(idx);
-  if (!isNaN(idx) && idx >= 0 && idx < feriados.length) {
-    if (confirm(`Confirma excluir o feriado ${feriados[idx]}?`)) {
-      feriados.splice(idx, 1);
-      salvarFeriados();
-      alert('Feriado excluído!');
-      gerarEscala();
-    }
-  } else {
-    alert('Índice inválido.');
-  }
-};
-
-function adicionarNomeExtra(dataStr) {
-  let nome = prompt('Nome para adicionar (extra):');
-  if (!nome) return;
-  let obs = prompt('Observação para esse nome (opcional):') || nome;
-  if (!observacoes[dataStr]) observacoes[dataStr] = {};
-  observacoes[dataStr][nome] = obs;
-  salvarObservacoes();
-  gerarEscala();
-}
-
-function editarObs(dataStr, nome) {
-  let atual = observacoes[dataStr]?.[nome] || nome;
-  let op = prompt(`Editar ou excluir observação para ${nome} em ${dataStr}.\nDigite o novo texto ou deixe vazio para excluir.`);
-  if (op === null) return;
-  if (op.trim() === '') {
-    delete observacoes[dataStr][nome];
-    if (Object.keys(observacoes[dataStr]).length === 0) delete observacoes[dataStr];
-  } else {
-    if (!observacoes[dataStr]) observacoes[dataStr] = {};
-    observacoes[dataStr][nome] = op;
-  }
-  salvarObservacoes();
-  gerarEscala();
-}
-
-function salvarNovaTarefa() {
-  let nome = document.getElementById('inputNomeTarefa').value.trim();
-  let data = document.getElementById('inputDataTarefa').value;
-  let descricao = document.getElementById('inputDescricaoTarefa').value.trim();
-  if (!nome || !data || !descricao) return alert('Preencha todos os campos da tarefa.');
-  tarefas.push({ nome, data, descricao });
-  salvarTarefas();
-  fecharModal('modalTarefa');
-  gerarEscala();
-}
-
-function preencherMesAno() {
-  const selectMes = document.getElementById('selectMes');
-  meses.forEach((m, i) => selectMes.innerHTML += `<option value="${i}">${m}</option>`);
-  const selectAno = document.getElementById('selectAno');
-  let anoAtual = new Date().getFullYear();
-  for(let i = anoAtual - 5; i <= anoAtual + 5; i++) {
-    selectAno.innerHTML += `<option value="${i}"${i === anoAtual ? ' selected' : ''}>${i}</option>`;
-  }
-}
-
-// ===== Função para gerar escala mensal (renderização calendário) =====
-function gerarEscala() {
-  const relatorio = document.getElementById('relatorio');
-  const mes = parseInt(document.getElementById('selectMes').value);
-  const ano = parseInt(document.getElementById('selectAno').value);
-  const equipeSelecionada = parseInt(document.getElementById('selectEquipe').value);
-
-  if (isNaN(mes) || isNaN(ano)) {
-    relatorio.innerHTML = 'Selecione mês e ano.';
-    return;
-  }
-
-  let diasNoMes = new Date(ano, mes + 1, 0).getDate();
-  let primeiroDiaSemana = new Date(ano, mes, 1).getDay(); // 0 (Domingo) a 6 (Sábado)
-  // Ajustar para segunda-feira = 0
-  primeiroDiaSemana = (primeiroDiaSemana + 6) % 7;
-
-  // Criar array dos dias com informações para render
-  let calendario = [];
-  for(let i = 0; i < primeiroDiaSemana; i++) {
-    calendario.push(null);
-  }
-  for(let d = 1; d <= diasNoMes; d++) {
-    calendario.push(new Date(ano, mes, d));
-  }
-
-  // Criar a tabela calendário
-  let html = `<h2>Escala para ${meses[mes]} de ${ano}</h2>`;
-  html += '<div class="calendar">';
-  calendario.forEach((dia, idx) => {
-    if (!dia) {
-      html += '<div class="calendar-day"></div>';
-      return;
-    }
-    const dataStr = dia.toISOString().slice(0,10);
-    let classeDia = '';
-    if (feriados.includes(dataStr)) classeDia = 'feriado';
-    if (dataStr === new Date().toISOString().slice(0,10)) classeDia = 'hoje';
-
-    html += `<div class="calendar-day ${classeDia}">`;
-    html += `<div class="data-num">${dia.getDate()}</div>`;
-
-    // Exibir membros da equipe que trabalha nesse dia
-    equipes.forEach((eq, i) => {
-      if (equipeSelecionada !== -1 && equipeSelecionada !== i) return; // Filtrar equipe selecionada
-
-      const escalaDia = calcularMembroNoDia(eq, dia);
-      if (!escalaDia) return;
-
-      // Destacar primeira equipe com classe especial
-      const destaque = (i === 0) ? 'destaque-primeira-equipe' : '';
-
-      escalaDia.forEach(membro => {
-        let styleCor = 'background:#6c757d; color:white;';
-        if (membro.tipo === 'fixo') styleCor = 'background:#007bff; color:white;';
-        else if (membro.tipo === 'rotativo') styleCor = 'background:#28a745; color:white;';
-
-        // Verificar afastamento para o membro na data
-        let afastado = verificarAfastamento(i, membro.tipo === 'fixo' ? 'F' : 'R' + membro.rotIndex, dataStr);
-        let afastTexto = '';
-        if (afastado) afastTexto = `<div class="afastamento ${afastado.tipo.toLowerCase()}">(${afastado.tipo})</div>`;
-
-        // Verificar se é feriado
-        let isFeriado = feriados.includes(dataStr);
-
-        html += `<div class="work ${destaque}" style="${styleCor}" title="${membro.nome}">${membro.nome}${afastTexto}</div>`;
-      });
-    });
-
-    // Exibir observações/extras
-    if (observacoes[dataStr]) {
-      Object.entries(observacoes[dataStr]).forEach(([nome, obs]) => {
-        html += `<div class="work extra-name" title="${obs}" onclick="editarObs('${dataStr}', '${nome}')">${nome}</div>`;
-      });
-      html += `<button onclick="adicionarNomeExtra('${dataStr}')">+ Extra</button>`;
-    } else {
-      html += `<button onclick="adicionarNomeExtra('${dataStr}')">+ Extra</button>`;
-    }
-
-    html += '</div>';
-  });
-  html += '</div>';
-  relatorio.innerHTML = html;
-}
-
-// Calcula quem trabalha no dia para uma equipe
-function calcularMembroNoDia(equipe, data) {
-  if (!equipe || !data) return null;
-  const { dataInicio, fixo, rotativos } = equipe;
-  if (!dataInicio) return null;
-
-  const inicio = new Date(dataInicio);
-  const diaDif = Math.floor((data - inicio) / (1000*60*60*24));
-  if (diaDif < 0) return null;
-
-  // Equipes fixas trabalham sempre
-  const membros = [];
-
-  if (fixo) {
-    membros.push({ tipo: 'fixo', nome: fixo });
-  }
-
-  if (rotativos && rotativos.length > 0) {
-    // Turno rotativo: cada 3 dias troca o rotativo que trabalha
-    const rotIndex = diaDif % rotativos.length;
-    if (rotativos[rotIndex]) {
-      membros.push({ tipo: 'rotativo', nome: rotativos[rotIndex], rotIndex });
-    }
-  }
-  return membros;
-}
-
-// Verifica se membro está afastado na data
-function verificarAfastamento(equipeIdx, membro, dataStr) {
-  for (let af of afastamentos) {
-    if (af.equipe === equipeIdx && af.membro === membro) {
-      if (dataStr >= af.inicio && dataStr <= af.fim) {
-        return af;
-      }
-    }
-  }
-  return null;
-}
-
-// ===== Eventos dos botões =====
-document.getElementById('btnAddEquipe').onclick = () => {
-  equipes.push({ nome: '', dataInicio: '', fixo: '', rotativos: ['', '', ''] });
-  renderEquipes();
-};
-
-document.getElementById('btnSalvar').onclick = salvarEquipes;
-document.getElementById('btnVisualizar').onclick = visualizarEquipes;
-document.getElementById('btnExcluir').onclick = excluirEquipe;
-
-document.getElementById('btnAfastamentos').onclick = () => abrirModal('modalAfastamento');
-document.getElementById('btnFeriados').onclick = () => abrirModal('modalFeriado');
-document.getElementById('btnAddTarefa').onclick = () => abrirModal('modalTarefa');
-document.getElementById('btnGerarEscala').onclick = gerarEscala;
-
-// ===== Inicialização =====
-async function iniciar() {
-  preencherMesAno();
-
-  // Carregar do localStorage primeiro (backup)
-  const eqsLS = localStorage.getItem('equipes24x96');
-  if (eqsLS) equipes = JSON.parse(eqsLS);
-  const afsLS = localStorage.getItem('afastamentos24x96');
-  if (afsLS) afastamentos = JSON.parse(afsLS);
-  const ferLS = localStorage.getItem('feriados24x96');
-  if (ferLS) feriados = JSON.parse(ferLS);
-  const tarLS = localStorage.getItem('tarefas24x96');
-  if (tarLS) tarefas = JSON.parse(tarLS);
-  const obsLS = localStorage.getItem('observacoes24x96');
-  if (obsLS) observacoes = JSON.parse(obsLS);
-
-  // Carregar do Firebase (se tiver)
-  await carregarDadosFirebase();
-
-  renderEquipes();
-  gerarEscala();
-  atualizarSelectEquipe();
-}
-
-window.onload = iniciar;
-</script>
-
+  <h1>Administração da Escala</h1>
+
+  <h2>Cadastro de Equipe</h2>
+  <input id="nome" placeholder="Nome da equipe" /><br />
+  <input id="data_inicio" type="date" /><br />
+  <input id="fixo" placeholder="Fixo" /><br />
+  <input id="rotativo0" placeholder="Rotativo 0" /><br />
+  <input id="rotativo1" placeholder="Rotativo 1" /><br />
+  <input id="rotativo2" placeholder="Rotativo 2" /><br />
+  <button onclick="salvarEquipe()">Salvar Equipe</button>
+
+  <h2>Cadastro de Feriado</h2>
+  <input id="feriadoData" type="date" /><br />
+  <input id="feriadoDescricao" placeholder="Descrição do feriado" /><br />
+  <button onclick="salvarFeriado()">Salvar Feriado</button>
+
+  <h2>Cadastro de Afastamento</h2>
+  <input id="afastamentoNome" placeholder="Nome do servidor" /><br />
+  <input id="afastamentoData" type="date" /><br />
+  <input id="afastamentoMotivo" placeholder="Motivo do afastamento" /><br />
+  <button onclick="salvarAfastamento()">Salvar Afastamento</button>
+
+  <h2>Observações</h2>
+  <textarea id="observacaoTexto" rows="4" cols="50" placeholder="Digite uma observação..."></textarea><br />
+  <button onclick="salvarObservacao()">Salvar Observação</button>
 </body>
 </html>
