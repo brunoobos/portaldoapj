@@ -39,6 +39,10 @@
   
 </style>
 </head>
+<script src="equipes.js"></script>
+</body>
+</html>
+
 <body>
 
 <h1>Administração da Escala 24x96</h1>
@@ -75,7 +79,7 @@
     <span class="close" onclick="fecharModal('modalAfastamento')">&times;</span>
     <h3>Cadastrar Afastamento</h3>
     <label>Equipe:</label>
-    <select id="selectEquipeAfastamento"></select>
+    <select id="modalEquipe"></select>
     <label>Membro:</label>
     <select id="modalMembro">
       <option value="F">Fixo</option>
@@ -90,9 +94,9 @@
       <option value="COMPENSACAO">Compensação</option>
     </select>
     <label>Data início:</label>
-    <input type="date" id="inputDataInicioAfastamento" />
+    <input type="date" id="modalInicio" />
     <label>Data fim:</label>
-    <input type="date" id="inputDataFimAfastamento" />
+    <input type="date" id="modalFim" />
     <br /><br />
     <button onclick="salvarAfastamento()">Salvar</button>
   </div>
@@ -126,15 +130,481 @@
   </div>
 </div>
 
+<script>
+let equipes = JSON.parse(localStorage.getItem('equipes24x96') || '[]');
+let afastamentos = JSON.parse(localStorage.getItem('afastamentos24x96') || '[]');
+let feriados = JSON.parse(localStorage.getItem('feriados24x96') || '[]');
+let observacoes = JSON.parse(localStorage.getItem('observacoes24x96') || '{}');
+let tarefas = JSON.parse(localStorage.getItem('tarefas24x96') || '[]');
+
+const meses = [
+  'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
+];
+
+function salvarObservacoes() {
+  localStorage.setItem('observacoes24x96', JSON.stringify(observacoes));
+}
+function salvarTarefas() {
+  localStorage.setItem('tarefas24x96', JSON.stringify(tarefas));
+}
+function salvarEquipes() {
+  localStorage.setItem('equipes24x96', JSON.stringify(equipes));
+  alert('Equipes salvas!');
+}
+
+function renderEquipes() {
+  const container = document.getElementById('equipes-container');
+  container.innerHTML = '';
+  equipes.forEach((eq, i) => {
+    eq.rotativos = eq.rotativos || ['', '', ''];
+    container.innerHTML += `
+      <div class="section">
+        <h3>Equipe ${i + 1}</h3>
+        <label>Nome:</label><input type="text" value="${eq.nome || ''}" onchange="equipes[${i}].nome=this.value" /><br/>
+        <label>Data Início:</label><input type="date" value="${eq.dataInicio || ''}" onchange="equipes[${i}].dataInicio=this.value" /><br/>
+        <label>Fixo:</label><input type="text" value="${eq.fixo || ''}" onchange="equipes[${i}].fixo=this.value" /><br/>
+        ${eq.rotativos.map((r,j) => `<label>R${j+1}:</label><input type="text" value="${r || ''}" onchange="equipes[${i}].rotativos[${j}]=this.value" /><br/>`).join('')}
+      </div>`;
+  });
+  atualizarSelectEquipe();
+}
+
+function atualizarSelectEquipe() {
+  const sel = document.getElementById('selectEquipe');
+  sel.innerHTML = '<option value="-1">Todas as equipes</option>';
+  equipes.forEach((eq, i) => sel.innerHTML += `<option value="${i}">${eq.nome || 'Equipe ' + (i + 1)}</option>`);
+  atualizarModalEquipe();
+}
+
+function atualizarModalEquipe() {
+  const sel = document.getElementById('modalEquipe');
+  if (!sel) return;
+  sel.innerHTML = '';
+  equipes.forEach((eq, i) => sel.innerHTML += `<option value="${i}">${eq.nome}</option>`);
+}
+
+function visualizarEquipes() {
+  alert(equipes.map((eq, i) => `Equipe ${i + 1}: ${eq.nome}, Fixo: ${eq.fixo}, Rotativos: ${eq.rotativos.join(', ')}`).join('\n\n'));
+}
+
+function excluirEquipe() {
+  let idx = prompt('Digite o número da equipe para excluir (começando em 0):');
+  idx = parseInt(idx);
+  if (!isNaN(idx) && idx >= 0 && idx < equipes.length) {
+    if (confirm(`Excluir equipe ${equipes[idx].nome}?`)) {
+      equipes.splice(idx, 1);
+      salvarEquipes();
+      renderEquipes();
+    }
+  } else {
+    alert('Índice inválido.');
+  }
+}
+
+function abrirModal(id) {
+  document.getElementById(id).style.display = 'flex';
+}
+function fecharModal(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+function salvarAfastamento() {
+  let eq = parseInt(document.getElementById('modalEquipe').value);
+  let membro = document.getElementById('modalMembro').value;
+  let tipo = document.getElementById('modalTipo').value;
+  let inicio = document.getElementById('modalInicio').value;
+  let fim = document.getElementById('modalFim').value;
+  if (!inicio || !fim) return alert('Preencha datas.');
+  afastamentos.push({ equipe: eq, membro, tipo, inicio, fim });
+  localStorage.setItem('afastamentos24x96', JSON.stringify(afastamentos));
+  fecharModal('modalAfastamento');
+  gerarEscala();
+}
+
+function salvarFeriado() {
+  let data = document.getElementById('feriadoData').value;
+  if (!data) return alert('Selecione a data do feriado.');
+  if (!feriados.includes(data)) {
+    feriados.push(data);
+    localStorage.setItem('feriados24x96', JSON.stringify(feriados));
+  } else {
+    alert('Feriado já cadastrado.');
+  }
+  fecharModal('modalFeriado');
+  gerarEscala();
+}
+
+function excluirAfastamento() {
+  if (afastamentos.length === 0) {
+    alert('Nenhum afastamento cadastrado.');
+    return;
+  }
+
+  let lista = 'Afastamentos cadastrados:\n';
+  afastamentos.forEach((af, i) => {
+    let equipeNome = equipes[af.equipe]?.nome || 'Equipe desconhecida';
+    let membroNome =
+      af.membro === 'F'
+        ? equipes[af.equipe]?.fixo || 'Fixo desconhecido'
+        : equipes[af.equipe]?.rotativos[parseInt(af.membro[1])] || 'Rotativo desconhecido';
+
+    lista += `${i}: ${equipeNome} - ${membroNome} (${af.tipo}) de ${af.inicio} até ${af.fim}\n`;
+  });
+
+  let idx = prompt(lista + '\nDigite o número do afastamento que deseja excluir:');
+  idx = parseInt(idx);
+  if (!isNaN(idx) && idx >= 0 && idx < afastamentos.length) {
+    if (confirm(`Confirma excluir o afastamento:\n${lista.split('\n')[idx + 1]}`)) {
+      afastamentos.splice(idx, 1);
+      localStorage.setItem('afastamentos24x96', JSON.stringify(afastamentos));
+      alert('Afastamento excluído!');
+      gerarEscala();
+    }
+  } else {
+    alert('Índice inválido.');
+  }
+}
+
+document.getElementById('btnExcluirAfastamento').onclick = excluirAfastamento;
+
+document.getElementById('btnExcluirFeriado').onclick = () => {
+  if (feriados.length === 0) return alert('Nenhum feriado cadastrado.');
+  let lista = 'Feriados cadastrados:\n';
+  feriados.forEach((f, i) => lista += `${i}: ${f}\n`);
+  let idx = prompt(lista + '\nDigite o número do feriado a excluir:');
+  idx = parseInt(idx);
+  if (!isNaN(idx) && idx >= 0 && idx < feriados.length) {
+    if (confirm(`Confirma excluir o feriado ${feriados[idx]}?`)) {
+      feriados.splice(idx, 1);
+      localStorage.setItem('feriados24x96', JSON.stringify(feriados));
+      alert('Feriado excluído!');
+      gerarEscala();
+    }
+  } else {
+    alert('Índice inválido.');
+  }
+};
+
+function adicionarNomeExtra(dataStr) {
+  let nome = prompt('Nome para adicionar (extra):');
+  if (!nome) return;
+  let obs = prompt('Observação para esse nome (opcional):') || nome;
+  if (!observacoes[dataStr]) observacoes[dataStr] = {};
+  observacoes[dataStr][nome] = obs;
+  salvarObservacoes();
+  gerarEscala();
+}
+
+function editarObs(dataStr, nome) {
+  let atual = observacoes[dataStr]?.[nome] || nome;
+  let op = prompt(`Editar ou excluir "${nome}" no dia ${dataStr}?\nDigite o novo nome ou deixe vazio para excluir.\nDigite CANCELAR para cancelar.`, atual);
+  if (op === null || op.toUpperCase() === 'CANCELAR') return; // cancelar
+  if (op === '') {
+    if (observacoes[dataStr]) {
+      delete observacoes[dataStr][nome];
+      if (Object.keys(observacoes[dataStr]).length === 0) delete observacoes[dataStr];
+    }
+  } else {
+    if (!observacoes[dataStr]) observacoes[dataStr] = {};
+    observacoes[dataStr][nome] = op;
+  }
+  salvarObservacoes();
+  gerarEscala();
+}
+
+function editarTarefa(index) {
+  let t = tarefas[index];
+  if (!t) return;
+  let novoNome = prompt("Editar nome da pessoa:", t.nome);
+  if (novoNome === null) return;
+  if (novoNome === '') {
+    if (confirm("Deseja excluir esta tarefa?")) {
+      tarefas.splice(index, 1);
+      salvarTarefas();
+      gerarEscala();
+    }
+    return;
+  }
+  let novaDesc = prompt("Editar descrição da tarefa:", t.descricao);
+  if (novaDesc === null) return;
+  t.nome = novoNome.trim();
+  t.descricao = novaDesc.trim();
+  salvarTarefas();
+  gerarEscala();
+}
+
+function editarAfastamento(index) {
+  let af = afastamentos[index];
+  if (!af) return;
+  let novoTipo = prompt(`Editar tipo de afastamento (FERIAS, LICENCA, COMPENSACAO):`, af.tipo);
+  if (novoTipo === null) return;
+  if (novoTipo === '') {
+    if (confirm("Deseja excluir este afastamento?")) {
+      afastamentos.splice(index, 1);
+      localStorage.setItem('afastamentos24x96', JSON.stringify(afastamentos));
+      gerarEscala();
+    }
+    return;
+  }
+  let novoInicio = prompt("Editar data início (AAAA-MM-DD):", af.inicio);
+  if (novoInicio === null) return;
+  let novoFim = prompt("Editar data fim (AAAA-MM-DD):", af.fim);
+  if (novoFim === null) return;
+
+  af.tipo = novoTipo.toUpperCase().trim();
+  af.inicio = novoInicio.trim();
+  af.fim = novoFim.trim();
+  localStorage.setItem('afastamentos24x96', JSON.stringify(afastamentos));
+  gerarEscala();
+}
+
+function gerarEscala() {
+  const mes = parseInt(document.getElementById('selectMes').value);
+  const ano = parseInt(document.getElementById('selectAno').value);
+  const eqIdx = parseInt(document.getElementById('selectEquipe').value);
+  const eqs = eqIdx === -1 ? equipes : [equipes[eqIdx]];
+
+  let html = `<h3>Escala ${meses[mes]}/${ano}</h3><div class="calendar">`;
+  ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].forEach(d => (html += `<div><b>${d}</b></div>`));
+
+  let primeiroDia = new Date(ano, mes, 1).getDay();
+  for (let i = 0; i < primeiroDia; i++) html += '<div class="calendar-day feriado"></div>';
+
+  let diasNoMes = new Date(ano, mes + 1, 0).getDate();
+
+  for (let dia = 1; dia <= diasNoMes; dia++) {
+    let dataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    let data = new Date(ano, mes, dia);
+    let diaSemana = data.getDay();
+    let isFeriado = feriados.includes(dataStr);
+    let classes = 'calendar-day';
+    if (isFeriado || diaSemana === 0 || diaSemana === 6) classes += ' feriado';
+
+    let hoje = new Date();
+    if (
+      data.getDate() === hoje.getDate() &&
+      data.getMonth() === hoje.getMonth() &&
+      data.getFullYear() === hoje.getFullYear()
+    ) {
+      classes += ' hoje';
+    }
+
+   //let box = `<div class="${classes}"><div class="data-num">${dia} <button onclick="adicionarNomeExtra('${dataStr}')" title="Adicionar nome extra" style="font-weight:bold; font-size:12px; color:#ff66b2; border:none; background:none; cursor:pointer;">+</button></div>`;
+
+   // pegar a dataInicio da primeira equipe (índice 0)
+const primeiraEquipe = equipes[0];
+let dataInicioPrimeiraEquipe = primeiraEquipe && primeiraEquipe.dataInicio ? new Date(primeiraEquipe.dataInicio) : null;
+
+// Comparar com a data atual (data)
+let isDiaInicioPrimeiraEquipe = false;
+if (dataInicioPrimeiraEquipe) {
+  isDiaInicioPrimeiraEquipe = (
+    data.getDate() === dataInicioPrimeiraEquipe.getDate() &&
+    data.getMonth() === dataInicioPrimeiraEquipe.getMonth() &&
+    data.getFullYear() === dataInicioPrimeiraEquipe.getFullYear()
+  );
+}
+
+let classeDiaNum = isDiaInicioPrimeiraEquipe ? 'data-num destaque-primeira-equipe' : 'data-num';
+
+let box = `<div class="${classes}"><div class="${classeDiaNum}">${dia} <button onclick="adicionarNomeExtra('${dataStr}')" title="Adicionar nome extra" style="font-weight:bold; font-size:12px; color:#ff66b2; border:none; background:none; cursor:pointer;">+</button></div>`;
+
+    eqs.forEach(eq => {
+      if (!eq.dataInicio) return;
+      let diasCorridos = Math.floor((data - new Date(eq.dataInicio)) / (1000 * 60 * 60 * 24));
+      if (diasCorridos < 0) return;
+      if (diasCorridos % 5 === 0) {
+        if (eq.fixo) {
+          let label = observacoes[dataStr]?.[eq.fixo] || eq.fixo;
+          box += `<div class="work" onclick="editarObs('${dataStr}','${eq.fixo}')" style="background:#003366;color:white; cursor:pointer;">${label}</div>`;
+        }
+        let ciclo = Math.floor(diasCorridos / 5) % 3;
+        const rodizio = [
+          [0, 1, 2],
+          [1, 2, 0],
+          [2, 0, 1],
+        ];
+        rodizio[ciclo].forEach(idx => {
+          let nome = eq.rotativos[idx];
+          if (nome) {
+            let label = observacoes[dataStr]?.[nome] || nome;
+            box += `<div class="work" onclick="editarObs('${dataStr}','${nome}')" style="background:#66b0ff;color:white; cursor:pointer;">${label}</div>`;
+          }
+        });
+      }
+    });
+
+    // Criar lista dos nomes da equipe que aparecem no dia (fixo + rotativos)
+    let nomesEquipeDia = [];
+    eqs.forEach(eq => {
+      if (!eq.dataInicio) return;
+      let diasCorridos = Math.floor((data - new Date(eq.dataInicio)) / (1000 * 60 * 60 * 24));
+      if (diasCorridos < 0) return;
+      if (diasCorridos % 5 === 0) {
+        if (eq.fixo) nomesEquipeDia.push(eq.fixo);
+        const ciclo = Math.floor(diasCorridos / 5) % 3;
+        const rodizio = [
+          [0, 1, 2],
+          [1, 2, 0],
+          [2, 0, 1],
+        ];
+        rodizio[ciclo].forEach(idx => {
+          let nome = eq.rotativos[idx];
+          if (nome) nomesEquipeDia.push(nome);
+        });
+      }
+    });
+
+    // Exibir nomes extras do dia (que não estão na equipe)
+    if (observacoes[dataStr]) {
+      Object.keys(observacoes[dataStr]).forEach(nome => {
+        if (!nomesEquipeDia.includes(nome)) {
+          box += `<div class="work extra-name" onclick="editarObs('${dataStr}','${nome}')" style="cursor:pointer;">${observacoes[dataStr][nome]}</div>`;
+        }
+      });
+    }
+
+    // *** REMOVIDO: Exibir tarefas dentro do dia no calendário (não exibir no box do dia) ***
+
+    // Exibir afastamentos que abrangem o dia
+    afastamentos.forEach((af, idx) => {
+      let inicio = new Date(af.inicio);
+      let fim = new Date(af.fim);
+      if (data >= inicio && data <= fim) {
+        let eqNome = equipes[af.equipe]?.nome || 'Equipe desconhecida';
+        let nomeMembro =
+          af.membro === 'F'
+            ? equipes[af.equipe]?.fixo || 'Fixo desconhecido'
+            : equipes[af.equipe]?.rotativos[parseInt(af.membro[1])] || 'Rotativo desconhecido';
+
+        let style = nomesEquipeDia.includes(nomeMembro)
+          ? ''
+          : 'opacity:0.7;';
+
+        box += `<div class="afastamento ${af.tipo.toLowerCase()}" onclick="editarAfastamento(${idx})" style="cursor:pointer;${style}">${nomeMembro} - ${af.tipo}</div>`;
+      }
+    });
+
+    box += '</div>';
+    html += box;
+  }
+  html += '</div>';
+
+  // Mostrar tarefas apenas do filtro (mês, ano, equipe)
+  let tarefasFiltradas = tarefas.filter(t => {
+    let dt = new Date(t.data);
+    if (dt.getMonth() !== mes || dt.getFullYear() !== ano) return false;
+
+    if (eqIdx === -1) return true; // todas as equipes
+
+    const eqFiltrada = equipes[eqIdx];
+    if (!eqFiltrada) return false;
+
+    return t.nome === eqFiltrada.fixo || eqFiltrada.rotativos.includes(t.nome);
+  });
+
+  html += '<div style="margin-top:20px;"><h3>Tarefas cadastradas para o filtro</h3>';
+  if (tarefasFiltradas.length === 0) {
+    html += '<p>Nenhuma tarefa para o filtro atual.</p>';
+  } else {
+    tarefasFiltradas.forEach((t, idx) => {
+      let dataFormat = new Date(t.data).toLocaleDateString('pt-BR');
+      html += `<div style="cursor:pointer; margin-bottom:6px;" onclick="editarTarefa(${idx})"><b>${dataFormat}</b> - ${t.nome}: ${t.descricao}</div>`;
+    });
+  }
+  html += '</div>';
+
+  document.getElementById('relatorio').innerHTML = html;
+}
+
+// Preencher selects mês e ano
+function preencherMesAno() {
+  const selectMes = document.getElementById('selectMes');
+  const selectAno = document.getElementById('selectAno');
+  selectMes.innerHTML = '';
+  meses.forEach((m, i) => selectMes.innerHTML += `<option value="${i}">${m}</option>`);
+  let anoAtual = new Date().getFullYear();
+  selectAno.innerHTML = '';
+  for(let a=anoAtual-5; a <= anoAtual+5; a++){
+    selectAno.innerHTML += `<option value="${a}">${a}</option>`;
+  }
+  selectMes.value = new Date().getMonth();
+  selectAno.value = anoAtual;
+}
+
+document.getElementById('btnAddEquipe').onclick = () => {
+  equipes.push({
+    nome: '',
+    dataInicio: '',
+    fixo: '',
+    rotativos: ['', '', '']
+  });
+  renderEquipes();
+};
+
+document.getElementById('btnSalvar').onclick = () => {
+  salvarEquipes();
+  alert('Equipes salvas com sucesso!');
+};
+
+document.getElementById('btnVisualizar').onclick = () => {
+  visualizarEquipes();
+};
+
+document.getElementById('btnExcluir').onclick = () => {
+  excluirEquipe();
+};
+
+document.getElementById('btnAfastamentos').onclick = () => {
+  if (equipes.length === 0) return alert('Cadastre equipes antes de cadastrar afastamentos.');
+  abrirModal('modalAfastamento');
+};
+
+document.getElementById('btnFeriados').onclick = () => {
+  abrirModal('modalFeriado');
+};
+
+document.getElementById('btnGerarEscala').onclick = () => {
+  if (equipes.length === 0) return alert('Cadastre equipes antes de gerar escala.');
+  gerarEscala();
+};
+
+document.getElementById('btnAddTarefa').onclick = () => {
+  abrirModal('modalTarefa');
+};
+
+function salvarNovaTarefa() {
+  let nome = document.getElementById('inputNomeTarefa').value.trim();
+  let data = document.getElementById('inputDataTarefa').value;
+  let descricao = document.getElementById('inputDescricaoTarefa').value.trim();
+  if (!nome || !data || !descricao) return alert('Preencha todos os campos da tarefa.');
+  tarefas.push({ nome, data, descricao });
+  salvarTarefas();
+  fecharModal('modalTarefa');
+  gerarEscala();
+}
+
+function iniciar() {
+  preencherMesAno();
+  renderEquipes();
+  atualizarSelectEquipe();
+  gerarEscala();
+}
+
+window.onload = iniciar;
+
+</script>
+<!-- Firebase SDK -->
 <script type="module">
-  import { getFirestore, collection, addDoc, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
     authDomain: "escala-18337.firebaseapp.com",
     projectId: "escala-18337",
-    storageBucket: "escala-18337.firebasestorage.app",
+    storageBucket: "escala-18337.appspot.com",
     messagingSenderId: "623332895586",
     appId: "1:623332895586:web:7070007bc7accfea1fda3b",
     measurementId: "G-RLP96MKFRR"
@@ -143,199 +613,28 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  let equipes = [];
-  let afastamentos = [];
-  let feriados = [];
-  let observacoes = {};
-  let tarefas = [];
+  // Evento ao clicar em "Salvar Feriado"
+  document.getElementById('btnSalvarFeriado').onclick = async () => {
+    const data = document.getElementById('inputDataFeriado').value;
+    const descricao = document.getElementById('inputDescricaoFeriado').value.trim();
 
-  const meses = [
-    'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
-  ];
-
-  // Carregar equipes do Firebase Firestore
-  async function carregarEquipesFirebase() {
-    equipes = [];
-    try {
-      const querySnapshot = await getDocs(collection(db, "equipes"));
-      querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        equipes.push({
-          id: docSnap.id,
-          nome: data.nome || '',
-          dataInicio: data.dataInicio || '',
-          fixo: data.fixo || '',
-          rotativos: data.rotativos || ['', '', '']
-        });
-      });
-      renderEquipes();
-    } catch (e) {
-      console.error("Erro ao carregar equipes do Firebase:", e);
-      alert('Erro ao carregar equipes do Firebase.');
-    }
-  }
-
-  // Salvar equipes no Firebase Firestore
-  async function salvarEquipesFirebase() {
-    if (equipes.length === 0) {
-      alert('Não há equipes para salvar.');
+    if (!data || !descricao) {
+      alert('Preencha todos os campos do feriado.');
       return;
     }
+
     try {
-      for (let i = 0; i < equipes.length; i++) {
-        const eq = equipes[i];
-        if (eq.id) {
-          await setDoc(doc(db, "equipes", eq.id), {
-            nome: eq.nome,
-            dataInicio: eq.dataInicio,
-            fixo: eq.fixo,
-            rotativos: eq.rotativos
-          });
-        } else {
-          const docRef = await addDoc(collection(db, "equipes"), {
-            nome: eq.nome,
-            dataInicio: eq.dataInicio,
-            fixo: eq.fixo,
-            rotativos: eq.rotativos
-          });
-          equipes[i].id = docRef.id;
-        }
-      }
-      alert('Equipes salvas com sucesso no Firebase!');
+      await addDoc(collection(db, "feriados"), { data, descricao });
+      alert('Feriado salvo no Firebase com sucesso!');
+      document.getElementById('inputDataFeriado').value = '';
+      document.getElementById('inputDescricaoFeriado').value = '';
+      fecharModal('modalFeriado');
     } catch (e) {
-      console.error("Erro ao salvar equipes no Firebase:", e);
-      alert('Erro ao salvar equipes no Firebase.');
+      console.error("Erro ao salvar no Firebase:", e);
+      alert("Erro ao salvar o feriado. Verifique o console.");
     }
-  }
-
-  function renderEquipes() {
-    const container = document.getElementById('equipes-container');
-    container.innerHTML = '';
-    equipes.forEach((eq, i) => {
-      eq.rotativos = eq.rotativos || ['', '', ''];
-      container.innerHTML += `
-        <div class="section">
-          <h3>Equipe ${i + 1}</h3>
-          <label>Nome:</label><input type="text" value="${eq.nome || ''}" onchange="equipes[${i}].nome=this.value" /><br/>
-          <label>Data Início:</label><input type="date" value="${eq.dataInicio || ''}" onchange="equipes[${i}].dataInicio=this.value" /><br/>
-          <label>Fixo:</label><input type="text" value="${eq.fixo || ''}" onchange="equipes[${i}].fixo=this.value" /><br/>
-          ${eq.rotativos.map((r,j) => `<label>R${j+1}:</label><input type="text" value="${r || ''}" onchange="equipes[${i}].rotativos[${j}]=this.value" /><br/>`).join('')}
-        </div>`;
-    });
-    atualizarSelectEquipe();
-    atualizarModalEquipe();
-  }
-
-  function atualizarSelectEquipe() {
-    const sel = document.getElementById('selectEquipe');
-    sel.innerHTML = '<option value="-1">Todas as equipes</option>';
-    equipes.forEach((eq, i) => sel.innerHTML += `<option value="${i}">${eq.nome || 'Equipe ' + (i + 1)}</option>`);
-  }
-
-  function atualizarModalEquipe() {
-    const sel = document.getElementById('selectEquipeAfastamento');
-    if (!sel) return;
-    sel.innerHTML = '';
-    equipes.forEach((eq, i) => sel.innerHTML += `<option value="${i}">${eq.nome || 'Equipe ' + (i + 1)}</option>`);
-  }
-
-  function visualizarEquipes() {
-    alert(equipes.map((eq, i) => `Equipe ${i + 1}: ${eq.nome}, Fixo: ${eq.fixo}, Rotativos: ${eq.rotativos.join(', ')}`).join('\n\n'));
-  }
-
-  function excluirEquipe() {
-    let idx = prompt('Digite o número da equipe para excluir (começando em 0):');
-    idx = parseInt(idx);
-    if (!isNaN(idx) && idx >= 0 && idx < equipes.length) {
-      if (confirm(`Excluir equipe ${equipes[idx].nome}?`)) {
-        equipes.splice(idx, 1);
-        renderEquipes();
-      }
-    } else {
-      alert('Índice inválido.');
-    }
-  }
-
-  function abrirModal(id) {
-    document.getElementById(id).style.display = 'flex';
-  }
-  function fecharModal(id) {
-    document.getElementById(id).style.display = 'none';
-  }
-
-  function preencherMesAno() {
-    const selectMes = document.getElementById('selectMes');
-    const selectAno = document.getElementById('selectAno');
-    selectMes.innerHTML = '';
-    meses.forEach((m, i) => selectMes.innerHTML += `<option value="${i}">${m}</option>`);
-    let anoAtual = new Date().getFullYear();
-    selectAno.innerHTML = '';
-    for(let a=anoAtual-5; a <= anoAtual+5; a++){
-      selectAno.innerHTML += `<option value="${a}">${a}</option>`;
-    }
-    selectMes.value = new Date().getMonth();
-    selectAno.value = anoAtual;
-  }
-
-  // Botões eventos
-  document.getElementById('btnAddEquipe').onclick = () => {
-    equipes.push({
-      nome: '',
-      dataInicio: '',
-      fixo: '',
-      rotativos: ['', '', '']
-    });
-    renderEquipes();
   };
-
-  document.getElementById('btnSalvar').onclick = salvarEquipesFirebase;
-
-  document.getElementById('btnVisualizar').onclick = () => {
-    visualizarEquipes();
-  };
-
-  document.getElementById('btnExcluir').onclick = () => {
-    excluirEquipe();
-  };
-
-  document.getElementById('btnAfastamentos').onclick = () => {
-    if (equipes.length === 0) return alert('Cadastre equipes antes de cadastrar afastamentos.');
-    abrirModal('modalAfastamento');
-  };
-
-  document.getElementById('btnFeriados').onclick = () => {
-    alert('Cadastro de feriados ainda não implementado para Firebase.');
-  };
-
-  document.getElementById('btnGerarEscala').onclick = () => {
-    if (equipes.length === 0) return alert('Cadastre equipes antes de gerar escala.');
-    alert('Função gerarEscala ainda não conectada ao Firebase, use local em memória.');
-  };
-
-  document.getElementById('btnAddTarefa').onclick = () => {
-    alert('Cadastro de tarefas ainda não implementado para Firebase.');
-  };
-
-  async function iniciar() {
-    preencherMesAno();
-    await carregarEquipesFirebase();
-    atualizarSelectEquipe();
-  }
-
-  window.onload = iniciar;
-
-  // Função de salvar afastamento para exemplo (precisa ajustar para usar Firebase)
-  window.salvarAfastamento = async function () {
-    alert('Salvar afastamento não implementado ainda.');
-  };
-  window.salvarFeriado = function () {
-    alert('Salvar feriado não implementado ainda.');
-  };
-  window.salvarNovaTarefa = function () {
-    alert('Salvar tarefa não implementado ainda.');
-  };
-
+</script>
 </script>
 
 </body>
