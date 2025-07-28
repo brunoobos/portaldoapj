@@ -39,10 +39,6 @@
   
 </style>
 </head>
-<script src="equipes.js"></script>
-</body>
-</html>
-
 <body>
 
 <h1>Administração da Escala 24x96</h1>
@@ -79,7 +75,7 @@
     <span class="close" onclick="fecharModal('modalAfastamento')">&times;</span>
     <h3>Cadastrar Afastamento</h3>
     <label>Equipe:</label>
-    <select id="modalEquipe"></select>
+    <select id="selectEquipeAfastamento"></select>
     <label>Membro:</label>
     <select id="modalMembro">
       <option value="F">Fixo</option>
@@ -94,9 +90,9 @@
       <option value="COMPENSACAO">Compensação</option>
     </select>
     <label>Data início:</label>
-    <input type="date" id="modalInicio" />
+    <input type="date" id="inputDataInicioAfastamento" />
     <label>Data fim:</label>
-    <input type="date" id="modalFim" />
+    <input type="date" id="inputDataFimAfastamento" />
     <br /><br />
     <button onclick="salvarAfastamento()">Salvar</button>
   </div>
@@ -131,7 +127,7 @@
 </div>
 
 <script type="module">
-  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
   const firebaseConfig = {
@@ -147,7 +143,6 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // Dados em memória
   let equipes = [];
   let afastamentos = [];
   let feriados = [];
@@ -159,35 +154,61 @@
     'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
   ];
 
-  // Salvar afastamento no Firebase
-  window.salvarAfastamento = async function () {
-    const equipe = document.getElementById('selectEquipeAfastamento').value;
-    const inicio = document.getElementById('inputDataInicioAfastamento').value;
-    const fim = document.getElementById('inputDataFimAfastamento').value;
-    const motivo = document.getElementById('inputMotivoAfastamento').value.trim();
+  // Carregar equipes do Firebase Firestore
+  async function carregarEquipesFirebase() {
+    equipes = [];
+    try {
+      const querySnapshot = await getDocs(collection(db, "equipes"));
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        equipes.push({
+          id: docSnap.id,
+          nome: data.nome || '',
+          dataInicio: data.dataInicio || '',
+          fixo: data.fixo || '',
+          rotativos: data.rotativos || ['', '', '']
+        });
+      });
+      renderEquipes();
+    } catch (e) {
+      console.error("Erro ao carregar equipes do Firebase:", e);
+      alert('Erro ao carregar equipes do Firebase.');
+    }
+  }
 
-    if (!equipe || !inicio || !fim || !motivo) {
-      alert('Preencha todos os campos do afastamento.');
+  // Salvar equipes no Firebase Firestore
+  async function salvarEquipesFirebase() {
+    if (equipes.length === 0) {
+      alert('Não há equipes para salvar.');
       return;
     }
-
     try {
-      await addDoc(collection(db, "afastamentos"), {
-        equipe,
-        inicio,
-        fim,
-        motivo
-      });
-      alert('Afastamento salvo com sucesso no Firebase!');
-      fecharModal('modalAfastamento');
-      // Opcional: atualizar afastamentos locais
+      for (let i = 0; i < equipes.length; i++) {
+        const eq = equipes[i];
+        if (eq.id) {
+          await setDoc(doc(db, "equipes", eq.id), {
+            nome: eq.nome,
+            dataInicio: eq.dataInicio,
+            fixo: eq.fixo,
+            rotativos: eq.rotativos
+          });
+        } else {
+          const docRef = await addDoc(collection(db, "equipes"), {
+            nome: eq.nome,
+            dataInicio: eq.dataInicio,
+            fixo: eq.fixo,
+            rotativos: eq.rotativos
+          });
+          equipes[i].id = docRef.id;
+        }
+      }
+      alert('Equipes salvas com sucesso no Firebase!');
     } catch (e) {
-      console.error("Erro ao salvar afastamento:", e);
-      alert('Erro ao salvar afastamento.');
+      console.error("Erro ao salvar equipes no Firebase:", e);
+      alert('Erro ao salvar equipes no Firebase.');
     }
-  };
+  }
 
-  // Renderizar equipes
   function renderEquipes() {
     const container = document.getElementById('equipes-container');
     container.innerHTML = '';
@@ -243,7 +264,6 @@
     document.getElementById(id).style.display = 'none';
   }
 
-  // Funções para preencher selects mês e ano
   function preencherMesAno() {
     const selectMes = document.getElementById('selectMes');
     const selectAno = document.getElementById('selectAno');
@@ -258,9 +278,7 @@
     selectAno.value = anoAtual;
   }
 
-  // A função gerarEscala permanece igual (pode ajustar depois se quiser usar Firebase)
-
-  // Eventos dos botões
+  // Botões eventos
   document.getElementById('btnAddEquipe').onclick = () => {
     equipes.push({
       nome: '',
@@ -271,9 +289,7 @@
     renderEquipes();
   };
 
-  document.getElementById('btnSalvar').onclick = () => {
-    alert('Equipes salvas em memória (sem localStorage). Você pode implementar salvamento no Firebase.');
-  };
+  document.getElementById('btnSalvar').onclick = salvarEquipesFirebase;
 
   document.getElementById('btnVisualizar').onclick = () => {
     visualizarEquipes();
@@ -301,13 +317,24 @@
     alert('Cadastro de tarefas ainda não implementado para Firebase.');
   };
 
-  function iniciar() {
+  async function iniciar() {
     preencherMesAno();
-    renderEquipes();
+    await carregarEquipesFirebase();
     atualizarSelectEquipe();
   }
 
   window.onload = iniciar;
+
+  // Função de salvar afastamento para exemplo (precisa ajustar para usar Firebase)
+  window.salvarAfastamento = async function () {
+    alert('Salvar afastamento não implementado ainda.');
+  };
+  window.salvarFeriado = function () {
+    alert('Salvar feriado não implementado ainda.');
+  };
+  window.salvarNovaTarefa = function () {
+    alert('Salvar tarefa não implementado ainda.');
+  };
 
 </script>
 
