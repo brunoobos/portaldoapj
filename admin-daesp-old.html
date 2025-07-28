@@ -131,46 +131,6 @@
 </div>
 
 <script>
-  <!-- Firebase SDK -->
-<script type="module">
-  // Importações do Firebase
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-  // Configuração do Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
-    authDomain: "escala-18337.firebaseapp.com",
-    projectId: "escala-18337",
-    storageBucket: "escala-18337.firebasestorage.app",
-    messagingSenderId: "623332895586",
-    appId: "1:623332895586:web:7070007bc7accfea1fda3b",
-    measurementId: "G-RLP96MKFRR"
-  };
-
-  // Inicialização do Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // Função modificada: salva feriado no Firebase
-  window.salvarFeriado = async function () {
-    const nome = document.getElementById('inputNomeFeriado').value.trim();
-    const data = document.getElementById('inputDataFeriado').value;
-    if (!nome || !data) return alert('Preencha todos os campos do feriado.');
-
-    try {
-      await addDoc(collection(db, "feriados"), { nome, data });
-      alert('Feriado salvo no Firebase!');
-      document.getElementById('inputNomeFeriado').value = '';
-      document.getElementById('inputDataFeriado').value = '';
-      fecharModal('modalFeriado');
-    } catch (e) {
-      console.error("Erro ao salvar no Firebase: ", e);
-      alert("Erro ao salvar no Firebase.");
-    }
-  };
-
-
 let equipes = JSON.parse(localStorage.getItem('equipes24x96') || '[]');
 let afastamentos = JSON.parse(localStorage.getItem('afastamentos24x96') || '[]');
 let feriados = JSON.parse(localStorage.getItem('feriados24x96') || '[]');
