@@ -2,9 +2,27 @@
 <html lang="pt-BR">
 <head> 
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Escala 24x96 - Admin Completo</title>
 <!-- Adicione os scripts do Firebase -->
+ <scritp>
+  const firebaseConfig = {
+  apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
+  authDomain: "escala-18337.firebaseapp.com",
+  databaseURL: "https://escala-18337-default-rtdb.firebaseio.com", // ESSENCIAL
+  projectId: "escala-18337",
+  storageBucket: "escala-18337.appspot.com",
+  messagingSenderId: "623332895586",
+  appId: "1:623332895586:web:7070007bc7accfea1fda3b",
+  measurementId: "G-RLP96MKFRR"
+};
+
+// Inicialização com verificação
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const database = firebase.database();
+</scritp> 
 <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
 <style>
@@ -32,6 +50,8 @@
   .ferias { background: #ffc107; color: #333; }
   .licenca { background: #dc3545; }
   .compensacao { background: #6f42c1; }
+  .destaque-primeira-equipe { color: red; font-weight: bold; }
+  .loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; color: white; font-size: 24px; }
 
   .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; 
            background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
@@ -40,12 +60,15 @@
   .modal-content input, .modal-content select { width: 100%; padding: 6px; box-sizing: border-box; }
   .close { position: absolute; top: 10px; right: 15px; font-size: 20px; cursor: pointer; }
   
+  @media (max-width: 768px) {
+    .calendar { grid-template-columns: repeat(1, 1fr); }
+    button { width: 100%; margin: 5px 0; }
+  }
 </style>
 </head>
-</body>
-</html>
-
 <body>
+
+<div class="loading" id="loading">Carregando...</div>
 
 <h1>Administração da Escala 24x96</h1>
 
@@ -133,573 +156,594 @@
 </div>
 
 <script>
-  // Configuração CORRETA para Realtime Database
-const firebaseConfig = {
-  apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
-  authDomain: "escala-18337.firebaseapp.com",
-  databaseURL: "https://escala-18337-default-rtdb.firebaseio.com", // ESSENCIAL
-  projectId: "escala-18337",
-  storageBucket: "escala-18337.appspot.com",
-  messagingSenderId: "623332895586",
-  appId: "1:623332895586:web:7070007bc7accfea1fda3b",
-  measurementId: "G-RLP96MKFRR"
-};
-
-// Inicialização com verificação
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
-const database = firebase.database();
-
-// Execute automaticamente ao carregar
-window.addEventListener('load', async () => {
-  const testeOk = await testeFirebase();
-  if (!testeOk) {
-    alert("Falha na conexão com o Firebase. Verifique o console (F12)");
-  }
-});
-
-// Dados iniciais (serão carregados do Firebase)
-let equipes = [];
-let afastamentos = [];
-let feriados = [];
-let observacoes = {};
-let tarefas = [];
-
-const meses = [
-  'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
-];
-
-// Funções para salvar no Firebase
-  async function salvarEquipes() {
-  const dados = {
-    equipes: equipes,
-    ultimaAtualizacao: firebase.database.ServerValue.TIMESTAMP
+  // Configuração para Realtime Database
+  const firebaseConfig = {
+    apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
+    authDomain: "escala-18337.firebaseapp.com",
+    databaseURL: "https://escala-18337-default-rtdb.firebaseio.com",
+    projectId: "escala-18337",
+    storageBucket: "escala-18337.appspot.com",
+    messagingSenderId: "623332895586",
+    appId: "1:623332895586:web:7070007bc7accfea1fda3b",
+    measurementId: "G-RLP96MKFRR"
   };
 
+  // Inicialização do Firebase
+  let database;
   try {
-    // Tenta salvar no Realtime Database
-    await database.ref('escala24x96/equipes').set(equipes);
-    
-    // Fallback para Firestore se necessário (opcional)
-    await firebase.firestore().collection('escala').doc('equipes').set(dados);
-    
-    console.log("Dados salvos em ambos os bancos");
-    alert("Salvo com sucesso!");
+    const firebaseApp = firebase.initializeApp(firebaseConfig);
+    console.log("Firebase inicializado com sucesso");
+    database = firebase.database();
   } catch (error) {
-    console.error("Erro ao salvar:", error);
-    // Fallback para localStorage
-    localStorage.setItem('equipes24x96', JSON.stringify(equipes));
-    alert("Dados salvos localmente (verifique conexão)");
+    console.error("Erro ao inicializar Firebase:", error);
+    alert("Erro ao conectar com o banco de dados. Os dados serão armazenados localmente.");
   }
-}
 
-async function salvarAfastamentos() {
-  try {
-    await database.ref('afastamentos24x96').set(afastamentos);
-    console.log('Afastamentos salvos no Firebase!');
-  } catch (error) {
-    console.error("Erro ao salvar afastamentos:", error);
+  // Dados iniciais (serão carregados do Firebase)
+  let equipes = [];
+  let afastamentos = [];
+  let feriados = [];
+  let observacoes = {};
+  let tarefas = [];
+
+  const meses = [
+    'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
+  ];
+
+  // Função para mostrar/ocultar loading
+  function showLoading(show) {
+    document.getElementById('loading').style.display = show ? 'flex' : 'none';
   }
-}
 
-async function salvarFeriados() {
-  try {
-    await database.ref('feriados24x96').set(feriados);
-    console.log('Feriados salvos no Firebase!');
-  } catch (error) {
-    console.error("Erro ao salvar feriados:", error);
+  // Funções para salvar no Firebase
+  async function salvarEquipes() {
+    showLoading(true);
+    try {
+      await database.ref('escala24x96/equipes').set(equipes);
+      console.log("Dados salvos com sucesso");
+      alert("Salvo com sucesso!");
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      // Fallback para localStorage
+      localStorage.setItem('equipes24x96', JSON.stringify(equipes));
+      alert("Dados salvos localmente (verifique conexão)");
+    } finally {
+      showLoading(false);
+    }
   }
-}
 
-async function salvarObservacoes() {
-  try {
-    await database.ref('observacoes24x96').set(observacoes);
-    console.log('Observações salvas no Firebase!');
-  } catch (error) {
-    console.error("Erro ao salvar observações:", error);
+  async function salvarAfastamentos() {
+    showLoading(true);
+    try {
+      await database.ref('afastamentos24x96').set(afastamentos);
+      console.log('Afastamentos salvos no Firebase!');
+    } catch (error) {
+      console.error("Erro ao salvar afastamentos:", error);
+      localStorage.setItem('afastamentos24x96', JSON.stringify(afastamentos));
+    } finally {
+      showLoading(false);
+    }
   }
-}
 
-async function salvarTarefas() {
-  try {
-    await database.ref('tarefas24x96').set(tarefas);
-    console.log('Tarefas salvas no Firebase!');
-  } catch (error) {
-    console.error("Erro ao salvar tarefas:", error);
+  async function salvarFeriados() {
+    showLoading(true);
+    try {
+      await database.ref('feriados24x96').set(feriados);
+      console.log('Feriados salvos no Firebase!');
+    } catch (error) {
+      console.error("Erro ao salvar feriados:", error);
+      localStorage.setItem('feriados24x96', JSON.stringify(feriados));
+    } finally {
+      showLoading(false);
+    }
   }
-}
 
-// Funções para carregar do Firebase
-async function carregarDados() {
-  try {
-    const snapshotEquipes = await database.ref('equipes24x96').once('value');
-    equipes = snapshotEquipes.val() || [];
-    
-    const snapshotAfastamentos = await database.ref('afastamentos24x96').once('value');
-    afastamentos = snapshotAfastamentos.val() || [];
-    
-    const snapshotFeriados = await database.ref('feriados24x96').once('value');
-    feriados = snapshotFeriados.val() || [];
-    
-    const snapshotObservacoes = await database.ref('observacoes24x96').once('value');
-    observacoes = snapshotObservacoes.val() || {};
-    
-    const snapshotTarefas = await database.ref('tarefas24x96').once('value');
-    tarefas = snapshotTarefas.val() || [];
-    
-    console.log('Dados carregados do Firebase!');
-    renderEquipes();
-    gerarEscala();
-  } catch (error) {
-    console.error("Erro ao carregar dados:", error);
-    // Fallback para localStorage se o Firebase falhar
+  async function salvarObservacoes() {
+    showLoading(true);
+    try {
+      await database.ref('observacoes24x96').set(observacoes);
+      console.log('Observações salvas no Firebase!');
+    } catch (error) {
+      console.error("Erro ao salvar observações:", error);
+      localStorage.setItem('observacoes24x96', JSON.stringify(observacoes));
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  async function salvarTarefas() {
+    showLoading(true);
+    try {
+      await database.ref('tarefas24x96').set(tarefas);
+      console.log('Tarefas salvas no Firebase!');
+    } catch (error) {
+      console.error("Erro ao salvar tarefas:", error);
+      localStorage.setItem('tarefas24x96', JSON.stringify(tarefas));
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  // Funções para carregar do Firebase
+  async function carregarDados() {
+    showLoading(true);
+    try {
+      // Tentar carregar do Firebase primeiro
+      const [equipesSnapshot, afastamentosSnapshot, feriadosSnapshot, observacoesSnapshot, tarefasSnapshot] = await Promise.all([
+        database.ref('escala24x96/equipes').once('value'),
+        database.ref('afastamentos24x96').once('value'),
+        database.ref('feriados24x96').once('value'),
+        database.ref('observacoes24x96').once('value'),
+        database.ref('tarefas24x96').once('value')
+      ]);
+      
+      equipes = equipesSnapshot.val() || [];
+      afastamentos = afastamentosSnapshot.val() || [];
+      feriados = feriadosSnapshot.val() || [];
+      observacoes = observacoesSnapshot.val() || {};
+      tarefas = tarefasSnapshot.val() || [];
+      
+      console.log('Dados carregados do Firebase!');
+    } catch (error) {
+      console.error("Erro ao carregar dados do Firebase:", error);
+      // Fallback para localStorage se o Firebase falhar
+      carregarDadosLocais();
+    } finally {
+      renderEquipes();
+      preencherMesAno();
+      gerarEscala();
+      showLoading(false);
+    }
+  }
+
+  function carregarDadosLocais() {
     equipes = JSON.parse(localStorage.getItem('equipes24x96') || '[]');
     afastamentos = JSON.parse(localStorage.getItem('afastamentos24x96') || '[]');
     feriados = JSON.parse(localStorage.getItem('feriados24x96') || '[]');
     observacoes = JSON.parse(localStorage.getItem('observacoes24x96') || '{}');
     tarefas = JSON.parse(localStorage.getItem('tarefas24x96') || '[]');
+    console.log('Dados carregados do localStorage');
   }
-}
 
-function renderEquipes() {
-  const container = document.getElementById('equipes-container');
-  container.innerHTML = '';
-  equipes.forEach((eq, i) => {
-    eq.rotativos = eq.rotativos || ['', '', ''];
-    container.innerHTML += `
-      <div class="section">
-        <h3>Equipe ${i + 1}</h3>
-        <label>Nome:</label><input type="text" value="${eq.nome || ''}" onchange="equipes[${i}].nome=this.value" /><br/>
-        <label>Data Início:</label><input type="date" value="${eq.dataInicio || ''}" onchange="equipes[${i}].dataInicio=this.value" /><br/>
-        <label>Fixo:</label><input type="text" value="${eq.fixo || ''}" onchange="equipes[${i}].fixo=this.value" /><br/>
-        ${eq.rotativos.map((r,j) => `<label>R${j+1}:</label><input type="text" value="${r || ''}" onchange="equipes[${i}].rotativos[${j}]=this.value" /><br/>`).join('')}
-      </div>`;
-  });
-  atualizarSelectEquipe();
-}
+  function renderEquipes() {
+    const container = document.getElementById('equipes-container');
+    container.innerHTML = '';
+    equipes.forEach((eq, i) => {
+      eq.rotativos = eq.rotativos || ['', '', ''];
+      container.innerHTML += `
+        <div class="section">
+          <h3>Equipe ${i + 1}</h3>
+          <label>Nome:</label><input type="text" value="${eq.nome || ''}" onchange="equipes[${i}].nome=this.value" /><br/>
+          <label>Data Início:</label><input type="date" value="${eq.dataInicio || ''}" onchange="equipes[${i}].dataInicio=this.value" /><br/>
+          <label>Fixo:</label><input type="text" value="${eq.fixo || ''}" onchange="equipes[${i}].fixo=this.value" /><br/>
+          ${eq.rotativos.map((r,j) => `<label>R${j+1}:</label><input type="text" value="${r || ''}" onchange="equipes[${i}].rotativos[${j}]=this.value" /><br/>`).join('')}
+        </div>`;
+    });
+    atualizarSelectEquipe();
+  }
 
-function atualizarSelectEquipe() {
-  const sel = document.getElementById('selectEquipe');
-  sel.innerHTML = '<option value="-1">Todas as equipes</option>';
-  equipes.forEach((eq, i) => sel.innerHTML += `<option value="${i}">${eq.nome || 'Equipe ' + (i + 1)}</option>`);
-  atualizarModalEquipe();
-}
+  function atualizarSelectEquipe() {
+    const sel = document.getElementById('selectEquipe');
+    sel.innerHTML = '<option value="-1">Todas as equipes</option>';
+    equipes.forEach((eq, i) => sel.innerHTML += `<option value="${i}">${eq.nome || 'Equipe ' + (i + 1)}</option>`);
+    atualizarModalEquipe();
+  }
 
-function atualizarModalEquipe() {
-  const sel = document.getElementById('modalEquipe');
-  if (!sel) return;
-  sel.innerHTML = '';
-  equipes.forEach((eq, i) => sel.innerHTML += `<option value="${i}">${eq.nome}</option>`);
-}
+  function atualizarModalEquipe() {
+    const sel = document.getElementById('modalEquipe');
+    if (!sel) return;
+    sel.innerHTML = '';
+    equipes.forEach((eq, i) => sel.innerHTML += `<option value="${i}">${eq.nome}</option>`);
+  }
 
-function visualizarEquipes() {
-  alert(equipes.map((eq, i) => `Equipe ${i + 1}: ${eq.nome}, Fixo: ${eq.fixo}, Rotativos: ${eq.rotativos.join(', ')}`).join('\n\n'));
-}
+  function visualizarEquipes() {
+    alert(equipes.map((eq, i) => `Equipe ${i + 1}: ${eq.nome}, Fixo: ${eq.fixo}, Rotativos: ${eq.rotativos.join(', ')}`).join('\n\n'));
+  }
 
-async function excluirEquipe() {
-  let idx = prompt('Digite o número da equipe para excluir (começando em 0):');
-  idx = parseInt(idx);
-  if (!isNaN(idx) && idx >= 0 && idx < equipes.length) {
-    if (confirm(`Excluir equipe ${equipes[idx].nome}?`)) {
-      equipes.splice(idx, 1);
-      await salvarEquipes();
-      renderEquipes();
+  async function excluirEquipe() {
+    let idx = prompt('Digite o número da equipe para excluir (começando em 0):');
+    idx = parseInt(idx);
+    if (!isNaN(idx) && idx >= 0 && idx < equipes.length) {
+      if (confirm(`Excluir equipe ${equipes[idx].nome}?`)) {
+        equipes.splice(idx, 1);
+        await salvarEquipes();
+        renderEquipes();
+      }
+    } else {
+      alert('Índice inválido.');
     }
-  } else {
-    alert('Índice inválido.');
   }
-}
 
-function abrirModal(id) {
-  document.getElementById(id).style.display = 'flex';
-}
-function fecharModal(id) {
-  document.getElementById(id).style.display = 'none';
-}
-
-async function salvarAfastamento() {
-  let eq = parseInt(document.getElementById('modalEquipe').value);
-  let membro = document.getElementById('modalMembro').value;
-  let tipo = document.getElementById('modalTipo').value;
-  let inicio = document.getElementById('modalInicio').value;
-  let fim = document.getElementById('modalFim').value;
-  if (!inicio || !fim) return alert('Preencha datas.');
+  function abrirModal(id) {
+    document.getElementById(id).style.display = 'flex';
+  }
   
-  afastamentos.push({ equipe: eq, membro, tipo, inicio, fim });
-  await salvarAfastamentos();
-  fecharModal('modalAfastamento');
-  gerarEscala();
-}
-
-async function salvarFeriado() {
-  let data = document.getElementById('feriadoData').value;
-  if (!data) return alert('Selecione a data do feriado.');
-  if (!feriados.includes(data)) {
-    feriados.push(data);
-    await salvarFeriados();
-  } else {
-    alert('Feriado já cadastrado.');
-  }
-  fecharModal('modalFeriado');
-  gerarEscala();
-}
-
-async function excluirAfastamento() {
-  if (afastamentos.length === 0) {
-    alert('Nenhum afastamento cadastrado.');
-    return;
+  function fecharModal(id) {
+    document.getElementById(id).style.display = 'none';
   }
 
-  let lista = 'Afastamentos cadastrados:\n';
-  afastamentos.forEach((af, i) => {
-    let equipeNome = equipes[af.equipe]?.nome || 'Equipe desconhecida';
-    let membroNome =
-      af.membro === 'F'
-        ? equipes[af.equipe]?.fixo || 'Fixo desconhecido'
-        : equipes[af.equipe]?.rotativos[parseInt(af.membro[1])] || 'Rotativo desconhecido';
-
-    lista += `${i}: ${equipeNome} - ${membroNome} (${af.tipo}) de ${af.inicio} até ${af.fim}\n`;
-  });
-
-  let idx = prompt(lista + '\nDigite o número do afastamento que deseja excluir:');
-  idx = parseInt(idx);
-  if (!isNaN(idx) && idx >= 0 && idx < afastamentos.length) {
-    if (confirm(`Confirma excluir o afastamento:\n${lista.split('\n')[idx + 1]}`)) {
-      afastamentos.splice(idx, 1);
-      await salvarAfastamentos();
-      alert('Afastamento excluído!');
-      gerarEscala();
-    }
-  } else {
-    alert('Índice inválido.');
+  async function salvarAfastamento() {
+    let eq = parseInt(document.getElementById('modalEquipe').value);
+    let membro = document.getElementById('modalMembro').value;
+    let tipo = document.getElementById('modalTipo').value;
+    let inicio = document.getElementById('modalInicio').value;
+    let fim = document.getElementById('modalFim').value;
+    if (!inicio || !fim) return alert('Preencha datas.');
+    
+    afastamentos.push({ equipe: eq, membro, tipo, inicio, fim });
+    await salvarAfastamentos();
+    fecharModal('modalAfastamento');
+    gerarEscala();
   }
-}
 
-document.getElementById('btnExcluirAfastamento').onclick = excluirAfastamento;
-
-document.getElementById('btnExcluirFeriado').onclick = async () => {
-  if (feriados.length === 0) return alert('Nenhum feriado cadastrado.');
-  let lista = 'Feriados cadastrados:\n';
-  feriados.forEach((f, i) => lista += `${i}: ${f}\n`);
-  let idx = prompt(lista + '\nDigite o número do feriado a excluir:');
-  idx = parseInt(idx);
-  if (!isNaN(idx) && idx >= 0 && idx < feriados.length) {
-    if (confirm(`Confirma excluir o feriado ${feriados[idx]}?`)) {
-      feriados.splice(idx, 1);
+  async function salvarFeriado() {
+    let data = document.getElementById('feriadoData').value;
+    if (!data) return alert('Selecione a data do feriado.');
+    if (!feriados.includes(data)) {
+      feriados.push(data);
       await salvarFeriados();
-      alert('Feriado excluído!');
-      gerarEscala();
+    } else {
+      alert('Feriado já cadastrado.');
     }
-  } else {
-    alert('Índice inválido.');
+    fecharModal('modalFeriado');
+    gerarEscala();
   }
-};
 
-function adicionarNomeExtra(dataStr) {
-  let nome = prompt('Nome para adicionar (extra):');
-  if (!nome) return;
-  let obs = prompt('Observação para esse nome (opcional):') || nome;
-  if (!observacoes[dataStr]) observacoes[dataStr] = {};
-  observacoes[dataStr][nome] = obs;
-  salvarObservacoes();
-  gerarEscala();
-}
-
-async function editarObs(dataStr, nome) {
-  let atual = observacoes[dataStr]?.[nome] || nome;
-  let op = prompt(`Editar ou excluir "${nome}" no dia ${dataStr}?\nDigite o novo nome ou deixe vazio para excluir.\nDigite CANCELAR para cancelar.`, atual);
-  if (op === null || op.toUpperCase() === 'CANCELAR') return; // cancelar
-  if (op === '') {
-    if (observacoes[dataStr]) {
-      delete observacoes[dataStr][nome];
-      if (Object.keys(observacoes[dataStr]).length === 0) delete observacoes[dataStr];
+  async function excluirAfastamento() {
+    if (afastamentos.length === 0) {
+      alert('Nenhum afastamento cadastrado.');
+      return;
     }
-  } else {
+
+    let lista = 'Afastamentos cadastrados:\n';
+    afastamentos.forEach((af, i) => {
+      let equipeNome = equipes[af.equipe]?.nome || 'Equipe desconhecida';
+      let membroNome =
+        af.membro === 'F'
+          ? equipes[af.equipe]?.fixo || 'Fixo desconhecido'
+          : equipes[af.equipe]?.rotativos[parseInt(af.membro[1])] || 'Rotativo desconhecido';
+
+      lista += `${i}: ${equipeNome} - ${membroNome} (${af.tipo}) de ${af.inicio} até ${af.fim}\n`;
+    });
+
+    let idx = prompt(lista + '\nDigite o número do afastamento que deseja excluir:');
+    idx = parseInt(idx);
+    if (!isNaN(idx) && idx >= 0 && idx < afastamentos.length) {
+      if (confirm(`Confirma excluir o afastamento:\n${lista.split('\n')[idx + 1]}`)) {
+        afastamentos.splice(idx, 1);
+        await salvarAfastamentos();
+        alert('Afastamento excluído!');
+        gerarEscala();
+      }
+    } else {
+      alert('Índice inválido.');
+    }
+  }
+
+  function adicionarNomeExtra(dataStr) {
+    let nome = prompt('Nome para adicionar (extra):');
+    if (!nome) return;
+    let obs = prompt('Observação para esse nome (opcional):') || nome;
     if (!observacoes[dataStr]) observacoes[dataStr] = {};
-    observacoes[dataStr][nome] = op;
+    observacoes[dataStr][nome] = obs;
+    salvarObservacoes();
+    gerarEscala();
   }
-  await salvarObservacoes();
-  gerarEscala();
-}
 
-async function editarTarefa(index) {
-  let t = tarefas[index];
-  if (!t) return;
-  let novoNome = prompt("Editar nome da pessoa:", t.nome);
-  if (novoNome === null) return;
-  if (novoNome === '') {
-    if (confirm("Deseja excluir esta tarefa?")) {
-      tarefas.splice(index, 1);
-      await salvarTarefas();
-      gerarEscala();
+  async function editarObs(dataStr, nome) {
+    let atual = observacoes[dataStr]?.[nome] || nome;
+    let op = prompt(`Editar ou excluir "${nome}" no dia ${dataStr}?\nDigite o novo nome ou deixe vazio para excluir.\nDigite CANCELAR para cancelar.`, atual);
+    if (op === null || op.toUpperCase() === 'CANCELAR') return; // cancelar
+    if (op === '') {
+      if (observacoes[dataStr]) {
+        delete observacoes[dataStr][nome];
+        if (Object.keys(observacoes[dataStr]).length === 0) delete observacoes[dataStr];
+      }
+    } else {
+      if (!observacoes[dataStr]) observacoes[dataStr] = {};
+      observacoes[dataStr][nome] = op;
     }
-    return;
+    await salvarObservacoes();
+    gerarEscala();
   }
-  let novaDesc = prompt("Editar descrição da tarefa:", t.descricao);
-  if (novaDesc === null) return;
-  t.nome = novoNome.trim();
-  t.descricao = novaDesc.trim();
-  await salvarTarefas();
-  gerarEscala();
-}
 
-async function editarAfastamento(index) {
-  let af = afastamentos[index];
-  if (!af) return;
-  let novoTipo = prompt(`Editar tipo de afastamento (FERIAS, LICENCA, COMPENSACAO):`, af.tipo);
-  if (novoTipo === null) return;
-  if (novoTipo === '') {
-    if (confirm("Deseja excluir este afastamento?")) {
-      afastamentos.splice(index, 1);
-      await salvarAfastamentos();
-      gerarEscala();
+  async function editarTarefa(index) {
+    let t = tarefas[index];
+    if (!t) return;
+    let novoNome = prompt("Editar nome da pessoa:", t.nome);
+    if (novoNome === null) return;
+    if (novoNome === '') {
+      if (confirm("Deseja excluir esta tarefa?")) {
+        tarefas.splice(index, 1);
+        await salvarTarefas();
+        gerarEscala();
+      }
+      return;
     }
-    return;
+    let novaDesc = prompt("Editar descrição da tarefa:", t.descricao);
+    if (novaDesc === null) return;
+    t.nome = novoNome.trim();
+    t.descricao = novaDesc.trim();
+    await salvarTarefas();
+    gerarEscala();
   }
-  let novoInicio = prompt("Editar data início (AAAA-MM-DD):", af.inicio);
-  if (novoInicio === null) return;
-  let novoFim = prompt("Editar data fim (AAAA-MM-DD):", af.fim);
-  if (novoFim === null) return;
 
-  af.tipo = novoTipo.toUpperCase().trim();
-  af.inicio = novoInicio.trim();
-  af.fim = novoFim.trim();
-  await salvarAfastamentos();
-  gerarEscala();
-}
-
-function gerarEscala() {
-  const mes = parseInt(document.getElementById('selectMes').value);
-  const ano = parseInt(document.getElementById('selectAno').value);
-  const eqIdx = parseInt(document.getElementById('selectEquipe').value);
-  const eqs = eqIdx === -1 ? equipes : [equipes[eqIdx]];
-
-  let html = `<h3>Escala ${meses[mes]}/${ano}</h3><div class="calendar">`;
-  ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].forEach(d => (html += `<div><b>${d}</b></div>`));
-
-  let primeiroDia = new Date(ano, mes, 1).getDay();
-  for (let i = 0; i < primeiroDia; i++) html += '<div class="calendar-day feriado"></div>';
-
-  let diasNoMes = new Date(ano, mes + 1, 0).getDate();
-
-  for (let dia = 1; dia <= diasNoMes; dia++) {
-    let dataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-    let data = new Date(ano, mes, dia);
-    let diaSemana = data.getDay();
-    let isFeriado = feriados.includes(dataStr);
-    let classes = 'calendar-day';
-    if (isFeriado || diaSemana === 0 || diaSemana === 6) classes += ' feriado';
-
-    let hoje = new Date();
-    if (
-      data.getDate() === hoje.getDate() &&
-      data.getMonth() === hoje.getMonth() &&
-      data.getFullYear() === hoje.getFullYear()
-    ) {
-      classes += ' hoje';
+  async function editarAfastamento(index) {
+    let af = afastamentos[index];
+    if (!af) return;
+    let novoTipo = prompt(`Editar tipo de afastamento (FERIAS, LICENCA, COMPENSACAO):`, af.tipo);
+    if (novoTipo === null) return;
+    if (novoTipo === '') {
+      if (confirm("Deseja excluir este afastamento?")) {
+        afastamentos.splice(index, 1);
+        await salvarAfastamentos();
+        gerarEscala();
+      }
+      return;
     }
+    let novoInicio = prompt("Editar data início (AAAA-MM-DD):", af.inicio);
+    if (novoInicio === null) return;
+    let novoFim = prompt("Editar data fim (AAAA-MM-DD):", af.fim);
+    if (novoFim === null) return;
 
-    // pegar a dataInicio da primeira equipe (índice 0)
-    const primeiraEquipe = equipes[0];
-    let dataInicioPrimeiraEquipe = primeiraEquipe && primeiraEquipe.dataInicio ? new Date(primeiraEquipe.dataInicio) : null;
+    af.tipo = novoTipo.toUpperCase().trim();
+    af.inicio = novoInicio.trim();
+    af.fim = novoFim.trim();
+    await salvarAfastamentos();
+    gerarEscala();
+  }
 
-    // Comparar com a data atual (data)
-    let isDiaInicioPrimeiraEquipe = false;
-    if (dataInicioPrimeiraEquipe) {
-      isDiaInicioPrimeiraEquipe = (
-        data.getDate() === dataInicioPrimeiraEquipe.getDate() &&
-        data.getMonth() === dataInicioPrimeiraEquipe.getMonth() &&
-        data.getFullYear() === dataInicioPrimeiraEquipe.getFullYear()
-      );
-    }
+  function gerarEscala() {
+    const mes = parseInt(document.getElementById('selectMes').value);
+    const ano = parseInt(document.getElementById('selectAno').value);
+    const eqIdx = parseInt(document.getElementById('selectEquipe').value);
+    const eqs = eqIdx === -1 ? equipes : [equipes[eqIdx]];
 
-    let classeDiaNum = isDiaInicioPrimeiraEquipe ? 'data-num destaque-primeira-equipe' : 'data-num';
+    let html = `<h3>Escala ${meses[mes]}/${ano}</h3><div class="calendar">`;
+    ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].forEach(d => (html += `<div><b>${d}</b></div>`));
 
-    let box = `<div class="${classes}"><div class="${classeDiaNum}">${dia} <button onclick="adicionarNomeExtra('${dataStr}')" title="Adicionar nome extra" style="font-weight:bold; font-size:12px; color:#ff66b2; border:none; background:none; cursor:pointer;">+</button></div>`;
+    let primeiroDia = new Date(ano, mes, 1).getDay();
+    for (let i = 0; i < primeiroDia; i++) html += '<div class="calendar-day feriado"></div>';
 
-    eqs.forEach(eq => {
-      if (!eq.dataInicio) return;
-      let diasCorridos = Math.floor((data - new Date(eq.dataInicio)) / (1000 * 60 * 60 * 24));
-      if (diasCorridos < 0) return;
-      if (diasCorridos % 5 === 0) {
-        if (eq.fixo) {
-          let label = observacoes[dataStr]?.[eq.fixo] || eq.fixo;
-          box += `<div class="work" onclick="editarObs('${dataStr}','${eq.fixo}')" style="background:#003366;color:white; cursor:pointer;">${label}</div>`;
+    let diasNoMes = new Date(ano, mes + 1, 0).getDate();
+
+    for (let dia = 1; dia <= diasNoMes; dia++) {
+      let dataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+      let data = new Date(ano, mes, dia);
+      let diaSemana = data.getDay();
+      let isFeriado = feriados.includes(dataStr);
+      let classes = 'calendar-day';
+      if (isFeriado || diaSemana === 0 || diaSemana === 6) classes += ' feriado';
+
+      let hoje = new Date();
+      if (
+        data.getDate() === hoje.getDate() &&
+        data.getMonth() === hoje.getMonth() &&
+        data.getFullYear() === hoje.getFullYear()
+      ) {
+        classes += ' hoje';
+      }
+
+      // pegar a dataInicio da primeira equipe (índice 0)
+      const primeiraEquipe = equipes[0];
+      let dataInicioPrimeiraEquipe = primeiraEquipe && primeiraEquipe.dataInicio ? new Date(primeiraEquipe.dataInicio) : null;
+
+      // Comparar com a data atual (data)
+      let isDiaInicioPrimeiraEquipe = false;
+      if (dataInicioPrimeiraEquipe) {
+        isDiaInicioPrimeiraEquipe = (
+          data.getDate() === dataInicioPrimeiraEquipe.getDate() &&
+          data.getMonth() === dataInicioPrimeiraEquipe.getMonth() &&
+          data.getFullYear() === dataInicioPrimeiraEquipe.getFullYear()
+        );
+      }
+
+      let classeDiaNum = isDiaInicioPrimeiraEquipe ? 'data-num destaque-primeira-equipe' : 'data-num';
+
+      let box = `<div class="${classes}"><div class="${classeDiaNum}">${dia} <button onclick="adicionarNomeExtra('${dataStr}')" title="Adicionar nome extra" style="font-weight:bold; font-size:12px; color:#ff66b2; border:none; background:none; cursor:pointer;">+</button></div>`;
+
+      eqs.forEach(eq => {
+        if (!eq.dataInicio) return;
+        let diasCorridos = Math.floor((data - new Date(eq.dataInicio)) / (1000 * 60 * 60 * 24));
+        if (diasCorridos < 0) return;
+        if (diasCorridos % 5 === 0) {
+          if (eq.fixo) {
+            let label = observacoes[dataStr]?.[eq.fixo] || eq.fixo;
+            box += `<div class="work" onclick="editarObs('${dataStr}','${eq.fixo}')" style="background:#003366;color:white; cursor:pointer;">${label}</div>`;
+          }
+          let ciclo = Math.floor(diasCorridos / 5) % 3;
+          const rodizio = [
+            [0, 1, 2],
+            [1, 2, 0],
+            [2, 0, 1],
+          ];
+          rodizio[ciclo].forEach(idx => {
+            let nome = eq.rotativos[idx];
+            if (nome) {
+              let label = observacoes[dataStr]?.[nome] || nome;
+              box += `<div class="work" onclick="editarObs('${dataStr}','${nome}')" style="background:#66b0ff;color:white; cursor:pointer;">${label}</div>`;
+            }
+          });
         }
-        let ciclo = Math.floor(diasCorridos / 5) % 3;
-        const rodizio = [
-          [0, 1, 2],
-          [1, 2, 0],
-          [2, 0, 1],
-        ];
-        rodizio[ciclo].forEach(idx => {
-          let nome = eq.rotativos[idx];
-          if (nome) {
-            let label = observacoes[dataStr]?.[nome] || nome;
-            box += `<div class="work" onclick="editarObs('${dataStr}','${nome}')" style="background:#66b0ff;color:white; cursor:pointer;">${label}</div>`;
+      });
+
+      // Criar lista dos nomes da equipe que aparecem no dia (fixo + rotativos)
+      let nomesEquipeDia = [];
+      eqs.forEach(eq => {
+        if (!eq.dataInicio) return;
+        let diasCorridos = Math.floor((data - new Date(eq.dataInicio)) / (1000 * 60 * 60 * 24));
+        if (diasCorridos < 0) return;
+        if (diasCorridos % 5 === 0) {
+          if (eq.fixo) nomesEquipeDia.push(eq.fixo);
+          const ciclo = Math.floor(diasCorridos / 5) % 3;
+          const rodizio = [
+            [0, 1, 2],
+            [1, 2, 0],
+            [2, 0, 1],
+          ];
+          rodizio[ciclo].forEach(idx => {
+            let nome = eq.rotativos[idx];
+            if (nome) nomesEquipeDia.push(nome);
+          });
+        }
+      });
+
+      // Exibir nomes extras do dia (que não estão na equipe)
+      if (observacoes[dataStr]) {
+        Object.keys(observacoes[dataStr]).forEach(nome => {
+          if (!nomesEquipeDia.includes(nome)) {
+            box += `<div class="work extra-name" onclick="editarObs('${dataStr}','${nome}')" style="cursor:pointer;">${observacoes[dataStr][nome]}</div>`;
           }
         });
       }
-    });
 
-    // Criar lista dos nomes da equipe que aparecem no dia (fixo + rotativos)
-    let nomesEquipeDia = [];
-    eqs.forEach(eq => {
-      if (!eq.dataInicio) return;
-      let diasCorridos = Math.floor((data - new Date(eq.dataInicio)) / (1000 * 60 * 60 * 24));
-      if (diasCorridos < 0) return;
-      if (diasCorridos % 5 === 0) {
-        if (eq.fixo) nomesEquipeDia.push(eq.fixo);
-        const ciclo = Math.floor(diasCorridos / 5) % 3;
-        const rodizio = [
-          [0, 1, 2],
-          [1, 2, 0],
-          [2, 0, 1],
-        ];
-        rodizio[ciclo].forEach(idx => {
-          let nome = eq.rotativos[idx];
-          if (nome) nomesEquipeDia.push(nome);
-        });
-      }
-    });
+      // Exibir afastamentos que abrangem o dia
+      afastamentos.forEach((af, idx) => {
+        let inicio = new Date(af.inicio);
+        let fim = new Date(af.fim);
+        if (data >= inicio && data <= fim) {
+          let eqNome = equipes[af.equipe]?.nome || 'Equipe desconhecida';
+          let nomeMembro =
+            af.membro === 'F'
+              ? equipes[af.equipe]?.fixo || 'Fixo desconhecido'
+              : equipes[af.equipe]?.rotativos[parseInt(af.membro[1])] || 'Rotativo desconhecido';
 
-    // Exibir nomes extras do dia (que não estão na equipe)
-    if (observacoes[dataStr]) {
-      Object.keys(observacoes[dataStr]).forEach(nome => {
-        if (!nomesEquipeDia.includes(nome)) {
-          box += `<div class="work extra-name" onclick="editarObs('${dataStr}','${nome}')" style="cursor:pointer;">${observacoes[dataStr][nome]}</div>`;
+          let style = nomesEquipeDia.includes(nomeMembro)
+            ? ''
+            : 'opacity:0.7;';
+
+          box += `<div class="afastamento ${af.tipo.toLowerCase()}" onclick="editarAfastamento(${idx})" style="cursor:pointer;${style}">${nomeMembro} - ${af.tipo}</div>`;
         }
       });
+
+      box += '</div>';
+      html += box;
     }
+    html += '</div>';
 
-    // Exibir afastamentos que abrangem o dia
-    afastamentos.forEach((af, idx) => {
-      let inicio = new Date(af.inicio);
-      let fim = new Date(af.fim);
-      if (data >= inicio && data <= fim) {
-        let eqNome = equipes[af.equipe]?.nome || 'Equipe desconhecida';
-        let nomeMembro =
-          af.membro === 'F'
-            ? equipes[af.equipe]?.fixo || 'Fixo desconhecido'
-            : equipes[af.equipe]?.rotativos[parseInt(af.membro[1])] || 'Rotativo desconhecido';
+    // Mostrar tarefas apenas do filtro (mês, ano, equipe)
+    let tarefasFiltradas = tarefas.filter(t => {
+      let dt = new Date(t.data);
+      if (dt.getMonth() !== mes || dt.getFullYear() !== ano) return false;
 
-        let style = nomesEquipeDia.includes(nomeMembro)
-          ? ''
-          : 'opacity:0.7;';
+      if (eqIdx === -1) return true; // todas as equipes
 
-        box += `<div class="afastamento ${af.tipo.toLowerCase()}" onclick="editarAfastamento(${idx})" style="cursor:pointer;${style}">${nomeMembro} - ${af.tipo}</div>`;
+      const eqFiltrada = equipes[eqIdx];
+      if (!eqFiltrada) return false;
+
+      return t.nome === eqFiltrada.fixo || eqFiltrada.rotativos.includes(t.nome);
+    });
+
+    html += '<div style="margin-top:20px;"><h3>Tarefas cadastradas para o filtro</h3>';
+    if (tarefasFiltradas.length === 0) {
+      html += '<p>Nenhuma tarefa para o filtro atual.</p>';
+    } else {
+      tarefasFiltradas.forEach((t, idx) => {
+        let dataFormat = new Date(t.data).toLocaleDateString('pt-BR');
+        html += `<div style="cursor:pointer; margin-bottom:6px;" onclick="editarTarefa(${idx})"><b>${dataFormat}</b> - ${t.nome}: ${t.descricao}</div>`;
+      });
+    }
+    html += '</div>';
+
+    document.getElementById('relatorio').innerHTML = html;
+  }
+
+  // Preencher selects mês e ano
+  function preencherMesAno() {
+    const selectMes = document.getElementById('selectMes');
+    const selectAno = document.getElementById('selectAno');
+    selectMes.innerHTML = '';
+    meses.forEach((m, i) => selectMes.innerHTML += `<option value="${i}">${m}</option>`);
+    let anoAtual = new Date().getFullYear();
+    selectAno.innerHTML = '';
+    for(let a=anoAtual-5; a <= anoAtual+5; a++){
+      selectAno.innerHTML += `<option value="${a}">${a}</option>`;
+    }
+    selectMes.value = new Date().getMonth();
+    selectAno.value = anoAtual;
+  }
+
+  // Event listeners
+  document.getElementById('btnAddEquipe').onclick = () => {
+    equipes.push({
+      nome: '',
+      dataInicio: '',
+      fixo: '',
+      rotativos: ['', '', '']
+    });
+    renderEquipes();
+  };
+
+  document.getElementById('btnSalvar').onclick = () => {
+    salvarEquipes();
+  };
+
+  document.getElementById('btnVisualizar').onclick = () => {
+    visualizarEquipes();
+  };
+
+  document.getElementById('btnExcluir').onclick = () => {
+    excluirEquipe();
+  };
+
+  document.getElementById('btnAfastamentos').onclick = () => {
+    if (equipes.length === 0) return alert('Cadastre equipes antes de cadastrar afastamentos.');
+    abrirModal('modalAfastamento');
+  };
+
+  document.getElementById('btnFeriados').onclick = () => {
+    abrirModal('modalFeriado');
+  };
+
+  document.getElementById('btnGerarEscala').onclick = () => {
+    if (equipes.length === 0) return alert('Cadastre equipes antes de gerar escala.');
+    gerarEscala();
+  };
+
+  document.getElementById('btnAddTarefa').onclick = () => {
+    abrirModal('modalTarefa');
+  };
+
+  document.getElementById('btnExcluirAfastamento').onclick = excluirAfastamento;
+
+  document.getElementById('btnExcluirFeriado').onclick = async () => {
+    if (feriados.length === 0) return alert('Nenhum feriado cadastrado.');
+    let lista = 'Feriados cadastrados:\n';
+    feriados.forEach((f, i) => lista += `${i}: ${f}\n`);
+    let idx = prompt(lista + '\nDigite o número do feriado a excluir:');
+    idx = parseInt(idx);
+    if (!isNaN(idx) && idx >= 0 && idx < feriados.length) {
+      if (confirm(`Confirma excluir o feriado ${feriados[idx]}?`)) {
+        feriados.splice(idx, 1);
+        await salvarFeriados();
+        alert('Feriado excluído!');
+        gerarEscala();
       }
-    });
+    } else {
+      alert('Índice inválido.');
+    }
+  };
 
-    box += '</div>';
-    html += box;
+  async function salvarNovaTarefa() {
+    let nome = document.getElementById('inputNomeTarefa').value.trim();
+    let data = document.getElementById('inputDataTarefa').value;
+    let descricao = document.getElementById('inputDescricaoTarefa').value.trim();
+    if (!nome || !data || !descricao) return alert('Preencha todos os campos da tarefa.');
+    tarefas.push({ nome, data, descricao });
+    await salvarTarefas();
+    fecharModal('modalTarefa');
+    gerarEscala();
   }
-  html += '</div>';
 
-  // Mostrar tarefas apenas do filtro (mês, ano, equipe)
-  let tarefasFiltradas = tarefas.filter(t => {
-    let dt = new Date(t.data);
-    if (dt.getMonth() !== mes || dt.getFullYear() !== ano) return false;
-
-    if (eqIdx === -1) return true; // todas as equipes
-
-    const eqFiltrada = equipes[eqIdx];
-    if (!eqFiltrada) return false;
-
-    return t.nome === eqFiltrada.fixo || eqFiltrada.rotativos.includes(t.nome);
+  // Iniciar aplicação
+  window.addEventListener('DOMContentLoaded', async () => {
+    await carregarDados();
   });
-
-  html += '<div style="margin-top:20px;"><h3>Tarefas cadastradas para o filtro</h3>';
-  if (tarefasFiltradas.length === 0) {
-    html += '<p>Nenhuma tarefa para o filtro atual.</p>';
-  } else {
-    tarefasFiltradas.forEach((t, idx) => {
-      let dataFormat = new Date(t.data).toLocaleDateString('pt-BR');
-      html += `<div style="cursor:pointer; margin-bottom:6px;" onclick="editarTarefa(${idx})"><b>${dataFormat}</b> - ${t.nome}: ${t.descricao}</div>`;
-    });
-  }
-  html += '</div>';
-
-  document.getElementById('relatorio').innerHTML = html;
-}
-
-// Preencher selects mês e ano
-function preencherMesAno() {
-  const selectMes = document.getElementById('selectMes');
-  const selectAno = document.getElementById('selectAno');
-  selectMes.innerHTML = '';
-  meses.forEach((m, i) => selectMes.innerHTML += `<option value="${i}">${m}</option>`);
-  let anoAtual = new Date().getFullYear();
-  selectAno.innerHTML = '';
-  for(let a=anoAtual-5; a <= anoAtual+5; a++){
-    selectAno.innerHTML += `<option value="${a}">${a}</option>`;
-  }
-  selectMes.value = new Date().getMonth();
-  selectAno.value = anoAtual;
-}
-
-document.getElementById('btnAddEquipe').onclick = () => {
-  equipes.push({
-    nome: '',
-    dataInicio: '',
-    fixo: '',
-    rotativos: ['', '', '']
-  });
-  renderEquipes();
-};
-
-document.getElementById('btnSalvar').onclick = () => {
-  salvarEquipes();
-};
-
-document.getElementById('btnVisualizar').onclick = () => {
-  visualizarEquipes();
-};
-
-document.getElementById('btnExcluir').onclick = () => {
-  excluirEquipe();
-};
-
-document.getElementById('btnAfastamentos').onclick = () => {
-  if (equipes.length === 0) return alert('Cadastre equipes antes de cadastrar afastamentos.');
-  abrirModal('modalAfastamento');
-};
-
-document.getElementById('btnFeriados').onclick = () => {
-  abrirModal('modalFeriado');
-};
-
-document.getElementById('btnGerarEscala').onclick = () => {
-  if (equipes.length === 0) return alert('Cadastre equipes antes de gerar escala.');
-  gerarEscala();
-};
-
-document.getElementById('btnAddTarefa').onclick = () => {
-  abrirModal('modalTarefa');
-};
-
-async function salvarNovaTarefa() {
-  let nome = document.getElementById('inputNomeTarefa').value.trim();
-  let data = document.getElementById('inputDataTarefa').value;
-  let descricao = document.getElementById('inputDescricaoTarefa').value.trim();
-  if (!nome || !data || !descricao) return alert('Preencha todos os campos da tarefa.');
-  tarefas.push({ nome, data, descricao });
-  await salvarTarefas();
-  fecharModal('modalTarefa');
-  gerarEscala();
-}
-
-async function iniciar() {
-  preencherMesAno();
-  await carregarDados(); // Agora é async
-  atualizarSelectEquipe();
-  gerarEscala();
-}
-
-window.onload = iniciar;
 </script>
 
 </body>
 </html>
+
+
+
