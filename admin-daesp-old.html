@@ -172,14 +172,26 @@ const meses = [
 ];
 
 // Funções para salvar no Firebase
-async function salvarEquipes() {
+  async function salvarEquipes() {
+  const dados = {
+    equipes: equipes,
+    ultimaAtualizacao: firebase.database.ServerValue.TIMESTAMP
+  };
+
   try {
-    await database.ref('equipes24x96').set(equipes);
-    console.log('Equipes salvas no Firebase!');
-    alert('Equipes salvas no Firebase!');
+    // Tenta salvar no Realtime Database
+    await database.ref('escala24x96/equipes').set(equipes);
+    
+    // Fallback para Firestore se necessário (opcional)
+    await firebase.firestore().collection('escala').doc('equipes').set(dados);
+    
+    console.log("Dados salvos em ambos os bancos");
+    alert("Salvo com sucesso!");
   } catch (error) {
-    console.error("Erro ao salvar equipes:", error);
-    alert("Erro ao salvar equipes. Verifique o console.");
+    console.error("Erro ao salvar:", error);
+    // Fallback para localStorage
+    localStorage.setItem('equipes24x96', JSON.stringify(equipes));
+    alert("Dados salvos localmente (verifique conexão)");
   }
 }
 
