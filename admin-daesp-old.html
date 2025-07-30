@@ -133,11 +133,10 @@
 </div>
 
 <script>
-// Configuração do Firebase
   const firebaseConfig = {
   apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
   authDomain: "escala-18337.firebaseapp.com",
-  databaseURL: "https://escala-18337-default-rtdb.firebaseio.com", // LINHA ADICIONADA
+  databaseURL: "https://escala-18337-default-rtdb.firebaseio.com",
   projectId: "escala-18337",
   storageBucket: "escala-18337.appspot.com",
   messagingSenderId: "623332895586",
@@ -145,14 +144,56 @@
   measurementId: "G-RLP96MKFRR"
 };
 
-// Inicialize o Firebase
-firebase.initializeApp(firebaseConfig);
+// Inicialização com tratamento de erro
+try {
+  firebase.initializeApp(firebaseConfig);
+  console.log("Firebase inicializado com sucesso!");
+} catch (error) {
+  console.error("Erro ao inicializar Firebase:", error);
+}
+
 const database = firebase.database();
 
 // Configuração do Firebase
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Verificação em tempo real da conexão
+database.ref('.info/connected').on('value', (snapshot) => {
+  if (snapshot.val() === true) {
+    console.log("✅ Conectado ao Firebase Realtime Database");
+  } else {
+    console.log("❌ Desconectado do Firebase");
+  }
+});
 
+  // Teste de escrita (execute no console do navegador para verificar)
+async function testeFirebase() {
+  try {
+    const testData = {
+      timestamp: new Date().toISOString(),
+      message: "Teste de conexão com Firebase"
+    };
+    
+    await database.ref('testConnection').set(testData);
+    console.log("✅ Dados de teste escritos com sucesso");
+    
+    const snapshot = await database.ref('testConnection').once('value');
+    console.log("📦 Dados lidos do Firebase:", snapshot.val());
+    
+    return true;
+  } catch (error) {
+    console.error("❌ Falha no teste do Firebase:", error);
+    return false;
+  }
+}
+
+// Execute automaticamente ao carregar
+window.addEventListener('load', async () => {
+  const testeOk = await testeFirebase();
+  if (!testeOk) {
+    alert("Falha na conexão com o Firebase. Verifique o console (F12)");
+  }
+});
 
 // Dados iniciais (serão carregados do Firebase)
 let equipes = [];
