@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -21,13 +22,20 @@
   button#btnFeriados { background: #6c757d; color: white; }
   button#btnAddTarefa { background: #28a745; color: white; margin-bottom: 10px; }
   button#btnExcluirAfastamento { background:#dc3545; color:white; margin-left:5px; }
+  /* Adicione no seu <style> */
+.afastamento-oculto {
+  display: none !important;
+}
   .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 20px; }
   .calendar-day { border: 1px solid #ccc; border-radius: 4px; padding: 5px; min-height: 90px; font-size: 12px; background: #fff; position: relative; }
   .calendar-day.feriado { background-color: #b0b0b0 !important; color: #fff; }
   .calendar-day.hoje { background-color: yellow !important; color: black; }
   .calendar-day .data-num { font-weight: bold; }
   .work { margin: 2px 0; padding: 2px 4px; border-radius: 3px; cursor: pointer; }
-  .work.extra-name { background: #ff66b2; color: white; } /* cor rosa para nomes extras */
+  .work.extra-name {
+  background: #a6d4ff; /* Azul claro (substitui o #ff66b2) */
+  color: #333; /* Cor do texto (opcional) */
+}
   .afastamento { margin: 2px 0; padding: 2px 4px; border-radius: 3px; font-size: 11px; color: #fff; }
   .ferias { background: #ffc107; color: #333; }
   .licenca { background: #dc3545; }
@@ -59,6 +67,12 @@
 <button id="btnExcluirFeriado">Excluir Feriado</button>
 
 <div class="section">
+    <h2>Filtros de Visualização</h2>
+    <button id="btnFiltrarAfastamentos">Ocultar Afastamentos</button>
+    <button id="btnMostrarTudo">Mostrar Tudo</button>
+  </div>
+
+<div class="section">
   <h2>Gerar Relatório da Escala</h2>
   <label for="selectEquipe">Equipe:</label>
   <select id="selectEquipe"><option value="-1">Todas as equipes</option></select><br/>
@@ -82,7 +96,7 @@
     <select id="modalEquipe"></select>
     <label>Membro:</label>
     <select id="modalMembro">
-      <option value="F">Fixo</option>
+      <option value="F">Interno</option>
       <option value="R0">Rotativo 1</option>
       <option value="R1">Rotativo 2</option>
       <option value="R2">Rotativo 3</option>
@@ -159,6 +173,7 @@ let afastamentos = [];
 let feriados = [];
 let observacoes = {};
 let tarefas = [];
+let mostrarAfastamentos = true; 
 
 const meses = [
   'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -467,6 +482,7 @@ function gerarEscala() {
   const ano = parseInt(document.getElementById('selectAno').value);
   const eqIdx = parseInt(document.getElementById('selectEquipe').value);
   const eqs = eqIdx === -1 ? equipes : [equipes[eqIdx]];
+  
 
   let html = `<h3>Escala ${meses[mes]}/${ano}</h3><div class="calendar">`;
   ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].forEach(d => (html += `<div><b>${d}</b></div>`));
@@ -562,50 +578,60 @@ function gerarEscala() {
       });
     }
 
-    afastamentos.forEach((af, idx) => {
-      let inicio = new Date(af.inicio);
-      let fim = new Date(af.fim);
-      if (data >= inicio && data <= fim) {
-        let eqNome = equipes[af.equipe]?.nome || 'Equipe desconhecida';
-        let nomeMembro =
-          af.membro === 'F'
-            ? equipes[af.equipe]?.fixo || 'Fixo desconhecido'
-            : equipes[af.equipe]?.rotativos[parseInt(af.membro[1])] || 'Rotativo desconhecido';
+// Adicione esta variável no início do seu script
+//let mostrarAfastamentos = true;
 
-        let style = nomesEquipeDia.includes(nomeMembro)
-          ? ''
-          : 'opacity:0.7;';
+// Modifique a parte dos afastamentos na função gerarEscala():
+afastamentos.forEach((af, idx) => {
+  let inicio = new Date(af.inicio);
+  let fim = new Date(af.fim);
+  
+  if (data >= inicio && data <= fim) {
+    let eqNome = equipes[af.equipe]?.nome || 'Equipe desconhecida';
+    let nomeMembro =
+      af.membro === 'F'
+        ? equipes[af.equipe]?.fixo || 'Fixo desconhecido'
+        : equipes[af.equipe]?.rotativos[parseInt(af.membro[1])] || 'Rotativo desconhecido';
 
-        box += `<div class="afastamento ${af.tipo.toLowerCase()}" onclick="editarAfastamento(${idx})" style="cursor:pointer;${style}">${nomeMembro} - ${af.tipo}</div>`;
-      }
-    });
+    let style = nomesEquipeDia.includes(nomeMembro) ? '' : 'opacity:0.7;';
+    let classeAfastamento = mostrarAfastamentos ? '' : 'afastamento-oculto';
+    
+    box += `<div class="afastamento ${af.tipo.toLowerCase()} ${classeAfastamento}" 
+                 onclick="editarAfastamento(${idx})" 
+                 style="cursor:pointer;${style}">
+              ${nomeMembro} - ${af.tipo}
+            </div>`;
+  }
+});
 
     box += '</div>';
     html += box;
   }
   html += '</div>';
 
-  let tarefasFiltradas = tarefas.filter(t => {
+  let tarefasFiltradas = tarefas
+  .filter(t => {
     let dt = new Date(t.data);
     if (dt.getMonth() !== mes || dt.getFullYear() !== ano) return false;
-
     if (eqIdx === -1) return true;
-
     const eqFiltrada = equipes[eqIdx];
-    if (!eqFiltrada) return false;
-
     return t.nome === eqFiltrada.fixo || eqFiltrada.rotativos.includes(t.nome);
-  });
+  })
+  .sort((a, b) => new Date(a.data) - new Date(b.data)); // Ordena por data crescente
 
   html += '<div style="margin-top:20px;"><h3>Tarefas cadastradas para o filtro</h3>';
-  if (tarefasFiltradas.length === 0) {
-    html += '<p>Nenhuma tarefa para o filtro atual.</p>';
-  } else {
-    tarefasFiltradas.forEach((t, idx) => {
-      let dataFormat = new Date(t.data).toLocaleDateString('pt-BR');
-      html += `<div style="cursor:pointer; margin-bottom:6px;" onclick="editarTarefa(${idx})"><b>${dataFormat}</b> - ${t.nome}: ${t.descricao}</div>`;
-    });
-  }
+ // Na função gerarEscala(), substitua o trecho de exibição de tarefas por:
+if (tarefasFiltradas.length === 0) {
+  html += '<p>Nenhuma tarefa para o filtro atual.</p>';
+} else {
+  tarefasFiltradas.forEach((t, idx) => {
+    const [anoT, mesT, diaT] = t.data.split('-');
+    const dataFormat = `${diaT}/${mesT}/${anoT}`;
+    html += `<div onclick="editarTarefa(${idx})" style="cursor:pointer;margin-bottom:6px;">
+              <b>${dataFormat}</b> - ${t.nome}: ${t.descricao}
+            </div>`;
+  });
+}
   html += '</div>';
 
   document.getElementById('relatorio').innerHTML = html;
@@ -667,12 +693,31 @@ document.getElementById('btnAddTarefa').onclick = () => {
 
 function salvarNovaTarefa() {
   let nome = document.getElementById('inputNomeTarefa').value.trim();
-  let data = document.getElementById('inputDataTarefa').value;
+  let dataInput = document.getElementById('inputDataTarefa').value; // Formato YYYY-MM-DD
   let descricao = document.getElementById('inputDescricaoTarefa').value.trim();
-  if (!nome || !data || !descricao) return alert('Preencha todos os campos da tarefa.');
+
+  if (!nome || !dataInput || !descricao) {
+    return alert('Preencha todos os campos da tarefa.');
+  }
+
+  // SOLUÇÃO DEFINITIVA - Mantém exatamente a data digitada
+  // Extrai dia, mês e ano diretamente da string YYYY-MM-DD
+  const [ano, mes, dia] = dataInput.split('-');
+  const dataCorrigida = new Date(ano, mes - 1, dia); // mes-1 porque Janeiro é 0
   
-  tarefas.push({ nome, data, descricao });
-  
+  // Formata para YYYY-MM-DD garantindo 2 dígitos
+  const dataFormatada = [
+    dataCorrigida.getFullYear(),
+    String(dataCorrigida.getMonth() + 1).padStart(2, '0'),
+    String(dataCorrigida.getDate()).padStart(2, '0')
+  ].join('-');
+
+  tarefas.push({ 
+    nome, 
+    data: dataFormatada, // Usa a data exata digitada
+    descricao 
+  });
+
   salvarTarefas()
     .then(() => {
       fecharModal('modalTarefa');
@@ -685,6 +730,16 @@ function iniciar() {
   preencherMesAno();
   carregarDados();
 }
+// Adicione no final do seu script, antes do window.onload
+document.getElementById('btnFiltrarAfastamentos').onclick = function() {
+  mostrarAfastamentos = false;
+  gerarEscala();
+};
+
+document.getElementById('btnMostrarTudo').onclick = function() {
+  mostrarAfastamentos = true;
+  gerarEscala();
+};
 
 window.onload = iniciar;
 </script>
