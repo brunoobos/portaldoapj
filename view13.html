@@ -3,87 +3,65 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Escala 24x7 - Visualização</title>
-
+<title>Visualizador de Escala 24x96</title>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-  }
-  label, select, button {
-    margin: 0 8px 12px 0;
-  }
-  #relatorio {
-    margin-top: 20px;
-  }
-  table {
-    border-collapse: collapse;
-    width: 100%;
-  }
-  th, td {
-    border: 1px solid #666;
-    padding: 6px;
-    text-align: center;
-    font-size: 14px;
-  }
-  th {
-    background-color: #eee;
-  }
-
-  /* Responsividade para celular */
-  @media screen and (max-width: 600px) {
-    select, button {
-      display: block;
-      width: 100%;
-      margin-bottom: 10px;
-    }
-    td, th {
-      font-size: 12px;
-    }
-  }
-
-  /* Estilo para impressão */
-  @media print {
-    body * {
-      visibility: hidden;
-    }
-    #relatorio, #relatorio * {
-      visibility: visible;
-    }
-    #relatorio {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-    }
+  body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+  h1 { text-align: center; }
+  .section { background: #fff; border-radius: 5px; padding: 15px; margin-bottom: 20px; box-shadow: 0 0 5px #ccc; }
+  button { padding: 8px 15px; margin: 5px; cursor: pointer; border-radius: 4px; border: none; }
+  button#btnGerarEscala { background: #17a2b8; color: white; }
+  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 20px; }
+  .calendar-day { border: 1px solid #ccc; border-radius: 4px; padding: 5px; min-height: 90px; font-size: 12px; background: #fff; position: relative; }
+  .calendar-day.feriado { background-color: #b0b0b0 !important; color: #fff; }
+  .calendar-day.hoje { background-color: yellow !important; color: black; }
+  .calendar-day .data-num { font-weight: bold; }
+  .work { margin: 2px 0; padding: 2px 4px; border-radius: 3px; }
+  .work.extra-name { background: #a6d4ff; color: #333; }
+  .afastamento { margin: 2px 0; padding: 2px 4px; border-radius: 3px; font-size: 11px; color: #fff; }
+  .ferias { background: #ffc107; color: #333; }
+  .licenca { background: #dc3545; }
+  .compensacao { background: #6f42c1; }
+  
+  /* Responsividade */
+  @media (max-width: 768px) {
+    body { padding: 10px; }
+    .section { padding: 10px; }
+    .calendar { grid-template-columns: repeat(7, 1fr); }
+    .calendar-day { min-height: 70px; font-size: 10px; }
   }
 </style>
-
-<!-- Firebase SDK Realtime Database -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
 </head>
+
 <body>
 
-<h2>Visualização da Escala</h2>
+<h1>Visualizador da Escala 24x96</h1>
 
-<label for="selectMes">Mês:</label>
-<select id="selectMes"></select>
-
-<label for="selectAno">Ano:</label>
-<select id="selectAno"></select>
-
-<label for="selectEquipe">Equipe:</label>
-<select id="selectEquipe">
-  <option value="-1">Todas</option>
-</select>
-
-<button onclick="gerarEscala()">Gerar Escala</button>
-<button onclick="imprimirPDF()">Imprimir Escala</button>
+<div class="section">
+  <h2>Gerar Relatório da Escala</h2>
+  <label for="selectEquipe">Equipe:</label>
+  <select id="selectEquipe"><option value="-1">Todas as equipes</option></select><br/>
+  <label for="selectMes">Mês:</label>
+  <select id="selectMes"></select><br/>
+  <label for="selectAno">Ano:</label>
+  <select id="selectAno"></select><br/>
+  <button id="btnGerarEscala">Gerar Escala Mensal</button>
+  
+  <div style="margin-top: 10px;">
+    <label for="dataInicio">Data Início:</label>
+    <input type="date" id="dataInicio">
+    <label for="dataFim">Data Fim:</label>
+    <input type="date" id="dataFim">
+    <button onclick="imprimirPDF()">Imprimir PDF</button>
+  </div>
+</div>
 
 <div id="relatorio"></div>
 
 <script>
+// Configuração do Firebase (mesma da sua página principal)
 const firebaseConfig = {
   apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
   authDomain: "escala-18337.firebaseapp.com",
@@ -95,97 +73,259 @@ const firebaseConfig = {
   measurementId: "G-RLP96MKFRR"
 };
 
-let db;
+// Inicialização do Firebase
+let database;
 try {
   const app = firebase.initializeApp(firebaseConfig);
-  db = firebase.database();
+  database = firebase.database();
+  console.log("Firebase inicializado com sucesso");
 } catch (error) {
-  console.error("Erro Firebase", error);
-  alert("Erro ao conectar ao banco de dados.");
+  console.error("Erro ao inicializar Firebase:", error);
+  alert("Erro ao conectar com o banco de dados. Verifique sua conexão com a internet.");
 }
 
-const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-               "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+let equipes = [];
+let afastamentos = [];
+let feriados = [];
+let observacoes = {};
+let tarefas = [];
+let mostrarAfastamentos = true;
 
-const equipes = ["Equipe A", "Equipe B", "Equipe C"];
+const meses = [
+  'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
+];
+
+// Carrega todos os dados do Firebase
+function carregarDados() {
+  return database.ref('escala24x96').once('value')
+    .then(snapshot => {
+      const data = snapshot.val() || {};
+      equipes = data.equipes || [];
+      afastamentos = data.afastamentos || [];
+      feriados = data.feriados || [];
+      observacoes = data.observacoes || {};
+      tarefas = data.tarefas || [];
+      
+      // Atualiza a interface
+      atualizarSelectEquipe();
+      gerarEscala();
+      
+      // Sincroniza em tempo real
+      iniciarSincronizacaoTempoReal();
+    })
+    .catch(error => {
+      console.error("Erro ao carregar dados:", error);
+      alert("Erro ao carregar dados do servidor.");
+    });
+}
+
+// Sincronização em tempo real
+function iniciarSincronizacaoTempoReal() {
+  database.ref('escala24x96').on('value', snapshot => {
+    const data = snapshot.val() || {};
+    equipes = data.equipes || [];
+    afastamentos = data.afastamentos || [];
+    feriados = data.feriados || [];
+    observacoes = data.observacoes || {};
+    tarefas = data.tarefas || [];
+    
+    atualizarSelectEquipe();
+    gerarEscala();
+  });
+}
+
+function atualizarSelectEquipe() {
+  const sel = document.getElementById('selectEquipe');
+  sel.innerHTML = '<option value="-1">Todas as equipes</option>';
+  equipes.forEach((eq, i) => sel.innerHTML += `<option value="${i}">${eq.nome || 'Equipe ' + (i + 1)}</option>`);
+}
+
+function gerarEscala() {
+  const mes = parseInt(document.getElementById('selectMes').value);
+  const ano = parseInt(document.getElementById('selectAno').value);
+  const eqIdx = parseInt(document.getElementById('selectEquipe').value);
+  const eqs = eqIdx === -1 ? equipes : [equipes[eqIdx]];
+  
+  if (!equipes.length) {
+    document.getElementById('relatorio').innerHTML = '<p>Nenhuma equipe cadastrada.</p>';
+    return;
+  }
+
+  let html = `<h3>Escala ${meses[mes]}/${ano}</h3><div class="calendar">`;
+  ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].forEach(d => (html += `<div><b>${d}</b></div>`));
+
+  let primeiroDia = new Date(ano, mes, 1).getDay();
+  for (let i = 0; i < primeiroDia; i++) html += '<div class="calendar-day feriado"></div>';
+
+  let diasNoMes = new Date(ano, mes + 1, 0).getDate();
+
+  for (let dia = 1; dia <= diasNoMes; dia++) {
+    let dataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    let data = new Date(ano, mes, dia);
+    let diaSemana = data.getDay();
+    let isFeriado = feriados.includes(dataStr);
+    let classes = 'calendar-day';
+    if (isFeriado || diaSemana === 0 || diaSemana === 6) classes += ' feriado';
+
+    let hoje = new Date();
+    if (
+      data.getDate() === hoje.getDate() &&
+      data.getMonth() === hoje.getMonth() &&
+      data.getFullYear() === hoje.getFullYear()
+    ) {
+      classes += ' hoje';
+    }
+
+    html += `<div class="${classes}" data-date="${dataStr}"><div class="data-num">${dia}</div>`;
+
+    eqs.forEach(eq => {
+      if (!eq.dataInicio) return;
+      let diasCorridos = Math.floor((data - new Date(eq.dataInicio)) / (1000 * 60 * 60 * 24));
+      if (diasCorridos < 0) return;
+      if (diasCorridos % 5 === 0) {
+        if (eq.fixo) {
+          let label = observacoes[dataStr]?.[eq.fixo] || eq.fixo;
+          html += `<div class="work" style="background:#003366;color:white;">${label}</div>`;
+        }
+        let ciclo = Math.floor(diasCorridos / 5) % 3;
+        const rodizio = [
+          [0, 1, 2],
+          [1, 2, 0],
+          [2, 0, 1],
+        ];
+        rodizio[ciclo].forEach(idx => {
+          let nome = eq.rotativos[idx];
+          if (nome) {
+            let label = observacoes[dataStr]?.[nome] || nome;
+            html += `<div class="work" style="background:#66b0ff;color:white;">${label}</div>`;
+          }
+        });
+      }
+    });
+
+    // Nomes extras
+    if (observacoes[dataStr]) {
+      Object.keys(observacoes[dataStr]).forEach(nome => {
+        let isMembroEquipe = eqs.some(eq => 
+          eq.fixo === nome || (eq.rotativos || []).includes(nome)
+        );
+        if (!isMembroEquipe) {
+          html += `<div class="work extra-name">${observacoes[dataStr][nome]}</div>`;
+        }
+      });
+    }
+
+    // Afastamentos
+    afastamentos.forEach(af => {
+      let inicio = new Date(af.inicio);
+      let fim = new Date(af.fim);
+      
+      if (data >= inicio && data <= fim) {
+        let nomeMembro =
+          af.membro === 'F'
+            ? equipes[af.equipe]?.fixo || 'Fixo desconhecido'
+            : equipes[af.equipe]?.rotativos[parseInt(af.membro[1])] || 'Rotativo desconhecido';
+
+        html += `<div class="afastamento ${af.tipo.toLowerCase()}">${nomeMembro} - ${af.tipo}</div>`;
+      }
+    });
+
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // Tarefas
+  let tarefasFiltradas = tarefas
+    .filter(t => {
+      let dt = new Date(t.data);
+      if (dt.getMonth() !== mes || dt.getFullYear() !== ano) return false;
+      if (eqIdx === -1) return true;
+      const eqFiltrada = equipes[eqIdx];
+      return t.nome === eqFiltrada.fixo || (eqFiltrada.rotativos || []).includes(t.nome);
+    })
+    .sort((a, b) => new Date(a.data) - new Date(b.data));
+
+  html += '<div style="margin-top:20px;"><h3>Tarefas</h3>';
+  if (tarefasFiltradas.length === 0) {
+    html += '<p>Nenhuma tarefa para o filtro atual.</p>';
+  } else {
+    tarefasFiltradas.forEach(t => {
+      const [anoT, mesT, diaT] = t.data.split('-');
+      const dataFormat = `${diaT}/${mesT}/${anoT}`;
+      html += `<div style="margin-bottom:6px;">
+                <b>${dataFormat}</b> - ${t.nome}: ${t.descricao}
+              </div>`;
+    });
+  }
+  html += '</div>';
+
+  document.getElementById('relatorio').innerHTML = html;
+}
 
 function preencherMesAno() {
   const selectMes = document.getElementById('selectMes');
   const selectAno = document.getElementById('selectAno');
-  const selectEquipe = document.getElementById('selectEquipe');
-
-  for(let i=0; i<meses.length; i++) {
-    let opt = document.createElement('option');
-    opt.value = i;
-    opt.text = meses[i];
-    selectMes.appendChild(opt);
+  selectMes.innerHTML = '';
+  meses.forEach((m, i) => selectMes.innerHTML += `<option value="${i}">${m}</option>`);
+  let anoAtual = new Date().getFullYear();
+  selectAno.innerHTML = '';
+  for(let a=anoAtual-5; a <= anoAtual+5; a++){
+    selectAno.innerHTML += `<option value="${a}">${a}</option>`;
   }
   selectMes.value = new Date().getMonth();
-
-  for(let y=2023; y<=2030; y++) {
-    let opt = document.createElement('option');
-    opt.value = y;
-    opt.text = y;
-    selectAno.appendChild(opt);
-  }
-  selectAno.value = new Date().getFullYear();
-
-  equipes.forEach((eq, idx) => {
-    let opt = document.createElement('option');
-    opt.value = idx;
-    opt.text = eq;
-    selectEquipe.appendChild(opt);
-  });
-  selectEquipe.value = -1;
-}
-
-async function carregarDados() {
-  return new Promise((resolve, reject) => {
-    db.ref('escala').once('value', snapshot => {
-      resolve(snapshot.val() || {});
-    }, error => reject(error));
-  });
-}
-
-async function gerarEscala() {
-  const mes = parseInt(document.getElementById('selectMes').value);
-  const ano = parseInt(document.getElementById('selectAno').value);
-  const eqIdx = parseInt(document.getElementById('selectEquipe').value);
-
-  const escalaDados = await carregarDados();
-  const totalDias = new Date(ano, mes + 1, 0).getDate();
-  let html = `<h3>Escala - ${meses[mes]} / ${ano}</h3>`;
-  html += `<table><thead><tr><th>Dia</th><th>Escala</th></tr></thead><tbody>`;
-
-  for(let dia = 1; dia <= totalDias; dia++) {
-    const diaStr = dia.toString().padStart(2, '0');
-    const mesStr = (mes+1).toString().padStart(2, '0');
-    const dataKey = `${ano}-${mesStr}-${diaStr}`;
-
-    const registros = escalaDados[dataKey] || [];
-    const registrosFiltrados = (eqIdx === -1) ? registros : registros.filter(r => r.equipe === equipes[eqIdx]);
-
-    let escalaDia = registrosFiltrados.length > 0 ?
-      registrosFiltrados.map(r => `${r.nome} (${r.turno})`).join(", ") :
-      "<i>Sem escala</i>";
-
-    html += `<tr><td>${diaStr}/${mesStr}</td><td>${escalaDia}</td></tr>`;
-  }
-
-  html += `</tbody></table>`;
-  document.getElementById('relatorio').innerHTML = html;
+  selectAno.value = anoAtual;
 }
 
 function imprimirPDF() {
-  gerarEscala().then(() => {
-    setTimeout(() => window.print(), 500);
+  const dataInicio = document.getElementById('dataInicio').value;
+  const dataFim = document.getElementById('dataFim').value;
+
+  if (!dataInicio || !dataFim) {
+    alert('Por favor, selecione o período completo.');
+    return;
+  }
+
+  const dataInicioDate = new Date(dataInicio);
+  const dataFimDate = new Date(dataFim);
+
+  // Mostra o período no topo
+  const periodoTexto = `Período: ${dataInicio} até ${dataFim}`;
+  const tituloPeriodo = document.createElement('h3');
+  tituloPeriodo.id = 'periodo-print';
+  tituloPeriodo.innerText = periodoTexto;
+  document.body.insertBefore(tituloPeriodo, document.body.firstChild);
+
+  // Esconde dias fora do intervalo
+  const dias = document.querySelectorAll('.calendar-day');
+  dias.forEach(dia => {
+    const diaData = dia.getAttribute('data-date');
+    if (!diaData) return;
+
+    const dataAtual = new Date(diaData);
+    if (dataAtual < dataInicioDate || dataAtual > dataFimDate) {
+      dia.style.display = 'none';
+    }
+  });
+
+  window.print();
+
+  // Depois da impressão, volta ao normal
+  tituloPeriodo.remove();
+  dias.forEach(dia => {
+    dia.style.display = '';
   });
 }
 
-window.onload = async () => {
+// Event Listeners
+document.getElementById('btnGerarEscala').onclick = gerarEscala;
+
+function iniciar() {
   preencherMesAno();
-  await gerarEscala();
-};
+  carregarDados();
+}
+
+window.onload = iniciar;
 </script>
 
 </body>
