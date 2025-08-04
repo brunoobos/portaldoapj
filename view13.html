@@ -1,185 +1,207 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Visualização de Escala</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Escala 24x7 - Visualização</title>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+  }
+  label, select, button {
+    margin: 0 8px 12px 0;
+  }
+  #relatorio {
+    margin-top: 20px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  th, td {
+    border: 1px solid #666;
+    padding: 6px;
+    text-align: center;
+  }
+  th {
+    background-color: #eee;
+  }
+  
+  /* Estilo para impressão */
+  @media print {
+    body * {
+      visibility: hidden;
     }
-    h1, h3 {
-      text-align: center;
+    #relatorio, #relatorio * {
+      visibility: visible;
     }
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 5px;
-      margin-top: 20px;
+    #relatorio {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
     }
-    .calendar-day {
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 5px;
-      min-height: 90px;
-      font-size: 12px;
-      background: #fff;
-      position: relative;
-    }
-    .calendar-day.feriado {
-      background-color: #b0b0b0;
-      color: #fff;
-    }
-    .calendar-day.hoje {
-      background-color: yellow;
-      color: black;
-    }
-    .calendar-day .data-num {
-      font-weight: bold;
-    }
-    .work {
-      margin: 2px 0;
-      padding: 2px 4px;
-      border-radius: 3px;
-      background: #66b0ff;
-      color: white;
-    }
-    .afastamento {
-      background: #ff6666;
-    }
-    .observacao {
-      background: #ffcc00;
-      color: black;
-    }
-    .tarefas {
-      background: #00cc99;
-    }
-  </style>
+  }
+</style>
+
+<!-- Firebase SDK Realtime Database -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 </head>
 <body>
 
-  <h1>Consulta da Escala</h1>
+<h2>Visualização da Escala</h2>
 
-  <div style="text-align: center; margin-bottom: 20px;">
-    <label>Equipe:</label>
-    <select id="selectEquipe"><option value="-1">Todas</option></select>
-    <label>Mês:</label>
-    <select id="selectMes"></select>
-    <label>Ano:</label>
-    <select id="selectAno"></select>
-    <button onclick="gerarEscala()">Gerar Escala</button>
-    <button onclick="toggleAfastamentos()">Mostrar/Ocultar Afastamentos</button>
-  </div>
+<label for="selectMes">Mês:</label>
+<select id="selectMes"></select>
 
-  <div id="relatorio"></div>
+<label for="selectAno">Ano:</label>
+<select id="selectAno"></select>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
-      authDomain: "escala-18337.firebaseapp.com",
-      databaseURL: "https://escala-18337-default-rtdb.firebaseio.com",
-      projectId: "escala-18337",
-      storageBucket: "escala-18337.appspot.com",
-      messagingSenderId: "623332895586",
-      appId: "1:623332895586:web:7070007bc7accfea1fda3b",
-      measurementId: "G-RLP96MKFRR"
-    };
+<label for="selectEquipe">Equipe:</label>
+<select id="selectEquipe">
+  <option value="-1">Todas</option>
+</select>
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+<button onclick="gerarEscala()">Gerar Escala</button>
+<button onclick="window.print()">Imprimir Escala</button>
 
-    let equipes = [], afastamentos = [], feriados = [], observacoes = {}, tarefas = [];
-    let mostrarAfastamentos = true;
+<div id="relatorio"></div>
 
-    const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+<script>
+  // Configuração Firebase (substitua pelos seus dados)
+// Configuração do Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
+  authDomain: "escala-18337.firebaseapp.com",
+  databaseURL: "https://escala-18337-default-rtdb.firebaseio.com",
+  projectId: "escala-18337",
+  storageBucket: "escala-18337.appspot.com",
+  messagingSenderId: "623332895586",
+  appId: "1:623332895586:web:7070007bc7accfea1fda3b",
+  measurementId: "G-RLP96MKFRR"
+};
 
-    async function carregarDados() {
-      const snapshot = await db.ref('escala24x96').once('value');
-      const data = snapshot.val() || {};
-      equipes = data.equipes || [];
-      afastamentos = data.afastamentos || [];
-      feriados = data.feriados || [];
-      observacoes = data.observacoes || {};
-      tarefas = data.tarefas || [];
+// Inicialização do Firebase
+let database;
+try {
+  const app = firebase.initializeApp(firebaseConfig);
+  database = firebase.database();
+  console.log("Firebase inicializado com sucesso");
+} catch (error) {
+  console.error("Erro ao inicializar Firebase:", error);
+  alert("Erro ao conectar com o banco de dados. Verifique sua conexão com a internet.");
+}
 
-      const sel = document.getElementById('selectEquipe');
-      sel.innerHTML = '<option value="-1">Todas</option>';
-      equipes.forEach((eq, i) => {
-        sel.innerHTML += `<option value="${i}">${eq.nome || 'Equipe ' + (i + 1)}</option>`;
-      });
+  const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                 "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+  // Exemplo de equipes fixas — ajuste conforme seu cadastro no Firebase se quiser
+  const equipes = ["Equipe A", "Equipe B", "Equipe C"];
+
+  // Para armazenar afastamentos e observações se precisar (vazio por enquanto)
+  let afastamentos = [];
+  let observacoes = [];
+
+  function preencherMesAno() {
+    const selectMes = document.getElementById('selectMes');
+    const selectAno = document.getElementById('selectAno');
+    const selectEquipe = document.getElementById('selectEquipe');
+
+    // Preencher meses
+    for(let i=0; i<meses.length; i++) {
+      let opt = document.createElement('option');
+      opt.value = i;
+      opt.text = meses[i];
+      selectMes.appendChild(opt);
+    }
+    selectMes.value = new Date().getMonth();
+
+    // Preencher anos (exemplo: 2023 a 2030)
+    for(let y=2023; y<=2030; y++) {
+      let opt = document.createElement('option');
+      opt.value = y;
+      opt.text = y;
+      selectAno.appendChild(opt);
+    }
+    selectAno.value = new Date().getFullYear();
+
+    // Preencher equipes
+    equipes.forEach((eq, idx) => {
+      let opt = document.createElement('option');
+      opt.value = idx;
+      opt.text = eq;
+      selectEquipe.appendChild(opt);
+    });
+    selectEquipe.value = -1;
+  }
+
+  // Função para carregar dados da escala do Firebase
+  async function carregarDados() {
+    return new Promise((resolve, reject) => {
+      db.ref('escala').once('value', snapshot => {
+        const data = snapshot.val() || {};
+        resolve(data);
+      }, error => reject(error));
+    });
+  }
+
+  // Função que gera o calendário da escala filtrando por mês, ano e equipe
+  async function gerarEscala() {
+    const mes = parseInt(document.getElementById('selectMes').value);
+    const ano = parseInt(document.getElementById('selectAno').value);
+    const eqIdx = parseInt(document.getElementById('selectEquipe').value);
+
+    // Carrega todos os dados
+    const escalaDados = await carregarDados();
+
+    // Filtrar os dados para o mês, ano e equipe selecionados
+    // Supondo que no Firebase você tem estrutura:
+    // escala: {
+    //   "2025-08-01": [{nome:"Fulano", equipe:"Equipe A", turno:"Manhã"}, ...],
+    //   "2025-08-02": [...],
+    //   ...
+    // }
+
+    // Vamos montar uma tabela do mês com os dias
+    // Primeiro, pega quantos dias no mês
+    const totalDias = new Date(ano, mes + 1, 0).getDate();
+
+    let html = `<h3>Escala - ${meses[mes]} / ${ano}</h3>`;
+    html += `<table><thead><tr><th>Dia</th><th>Escala</th></tr></thead><tbody>`;
+
+    for(let dia = 1; dia <= totalDias; dia++) {
+      // Formatar data YYYY-MM-DD
+      const diaStr = dia.toString().padStart(2, '0');
+      const mesStr = (mes+1).toString().padStart(2, '0');
+      const dataKey = `${ano}-${mesStr}-${diaStr}`;
+
+      const registros = escalaDados[dataKey] || [];
+
+      // Se selecionou uma equipe específica, filtra
+      const registrosFiltrados = (eqIdx === -1) ? registros : registros.filter(r => r.equipe === equipes[eqIdx]);
+
+      // Monta texto da escala do dia
+      let escalaDia = registrosFiltrados.length > 0 ?
+        registrosFiltrados.map(r => `${r.nome} (${r.turno})`).join(", ") :
+        "<i>Sem escala</i>";
+
+      html += `<tr><td>${diaStr}/${mesStr}</td><td>${escalaDia}</td></tr>`;
     }
 
-    function preencherMesAno() {
-      const selectMes = document.getElementById('selectMes');
-      const selectAno = document.getElementById('selectAno');
-      selectMes.innerHTML = '';
-      meses.forEach((m, i) => selectMes.innerHTML += `<option value="${i}">${m}</option>`);
-      let anoAtual = new Date().getFullYear();
-      selectAno.innerHTML = '';
-      for(let a=anoAtual-1; a <= anoAtual+2; a++){
-        selectAno.innerHTML += `<option value="${a}">${a}</option>`;
-      }
-      selectMes.value = new Date().getMonth();
-      selectAno.value = anoAtual;
-    }
+    html += `</tbody></table>`;
 
-    function toggleAfastamentos() {
-      mostrarAfastamentos = !mostrarAfastamentos;
-      gerarEscala();
-    }
+    document.getElementById('relatorio').innerHTML = html;
+  }
 
-    function gerarEscala() {
-      const mes = parseInt(document.getElementById('selectMes').value);
-      const ano = parseInt(document.getElementById('selectAno').value);
-      const eqIdx = parseInt(document.getElementById('selectEquipe').value);
-      const eqs = eqIdx === -1 ? equipes : [equipes[eqIdx]];
-
-      let html = `<h3>Escala ${meses[mes]} de ${ano}</h3>`;
-      html += `<div class="calendar">`;
-
-      const primeiroDia = new Date(ano, mes, 1).getDay();
-      const ultimoDia = new Date(ano, mes + 1, 0).getDate();
-
-      for (let i = 0; i < primeiroDia; i++) html += `<div></div>`;
-
-      for (let dia = 1; dia <= ultimoDia; dia++) {
-        const data = `${ano}-${(mes + 1).toString().padStart(2, '0')}-${dia.toString().padStart(2, '0')}`;
-        const hoje = new Date();
-        const dataAtual = `${hoje.getFullYear()}-${(hoje.getMonth() + 1).toString().padStart(2, '0')}-${hoje.getDate().toString().padStart(2, '0')}`;
-        const feriado = feriados.find(f => f.data === data);
-        let diaHtml = `<div class="calendar-day${data === dataAtual ? ' hoje' : ''}${feriado ? ' feriado' : ''}">`;
-        diaHtml += `<div class="data-num">${dia}</div>`;
-
-        eqs.forEach(eq => {
-          const escala = eq.escala || {};
-          const eventos = escala[data] || [];
-          eventos.forEach(e => {
-            if (e.tipo === 'afastamento' && !mostrarAfastamentos) return;
-            let classe = 'work';
-            if (e.tipo === 'afastamento') classe += ' afastamento';
-            if (e.tipo === 'observacao') classe += ' observacao';
-            if (e.tipo === 'tarefa') classe += ' tarefas';
-            diaHtml += `<div class="${classe}">${e.nome}</div>`;
-          });
-        });
-
-        diaHtml += `</div>`;
-        html += diaHtml;
-      }
-
-      html += `</div>`;
-      document.getElementById('relatorio').innerHTML = html;
-    }
-
-    window.onload = async () => {
-      preencherMesAno();
-      await carregarDados();
-    };
-  </script>
+  // Ao carregar a página
+  window.onload = async () => {
+    preencherMesAno();
+    await gerarEscala();
+  };
+</script>
 
 </body>
 </html>
