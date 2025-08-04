@@ -23,11 +23,24 @@
     border: 1px solid #666;
     padding: 6px;
     text-align: center;
+    font-size: 14px;
   }
   th {
     background-color: #eee;
   }
-  
+
+  /* Responsividade para celular */
+  @media screen and (max-width: 600px) {
+    select, button {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    td, th {
+      font-size: 12px;
+    }
+  }
+
   /* Estilo para impressão */
   @media print {
     body * {
@@ -66,13 +79,11 @@
 </select>
 
 <button onclick="gerarEscala()">Gerar Escala</button>
-<button onclick="window.print()">Imprimir Escala</button>
+<button onclick="imprimirPDF()">Imprimir Escala</button>
 
 <div id="relatorio"></div>
 
 <script>
-  // Configuração Firebase (substitua pelos seus dados)
-// Configuração do Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0",
   authDomain: "escala-18337.firebaseapp.com",
@@ -84,125 +95,100 @@ const firebaseConfig = {
   measurementId: "G-RLP96MKFRR"
 };
 
-// Inicialização do Firebase
-let database;
+let db;
 try {
   const app = firebase.initializeApp(firebaseConfig);
-  database = firebase.database();
-  console.log("Firebase inicializado com sucesso");
+  db = firebase.database();
 } catch (error) {
-  console.error("Erro ao inicializar Firebase:", error);
-  alert("Erro ao conectar com o banco de dados. Verifique sua conexão com a internet.");
+  console.error("Erro Firebase", error);
+  alert("Erro ao conectar ao banco de dados.");
 }
 
-  const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-                 "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+               "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-  // Exemplo de equipes fixas — ajuste conforme seu cadastro no Firebase se quiser
-  const equipes = ["Equipe A", "Equipe B", "Equipe C"];
+const equipes = ["Equipe A", "Equipe B", "Equipe C"];
 
-  // Para armazenar afastamentos e observações se precisar (vazio por enquanto)
-  let afastamentos = [];
-  let observacoes = [];
+function preencherMesAno() {
+  const selectMes = document.getElementById('selectMes');
+  const selectAno = document.getElementById('selectAno');
+  const selectEquipe = document.getElementById('selectEquipe');
 
-  function preencherMesAno() {
-    const selectMes = document.getElementById('selectMes');
-    const selectAno = document.getElementById('selectAno');
-    const selectEquipe = document.getElementById('selectEquipe');
+  for(let i=0; i<meses.length; i++) {
+    let opt = document.createElement('option');
+    opt.value = i;
+    opt.text = meses[i];
+    selectMes.appendChild(opt);
+  }
+  selectMes.value = new Date().getMonth();
 
-    // Preencher meses
-    for(let i=0; i<meses.length; i++) {
-      let opt = document.createElement('option');
-      opt.value = i;
-      opt.text = meses[i];
-      selectMes.appendChild(opt);
-    }
-    selectMes.value = new Date().getMonth();
+  for(let y=2023; y<=2030; y++) {
+    let opt = document.createElement('option');
+    opt.value = y;
+    opt.text = y;
+    selectAno.appendChild(opt);
+  }
+  selectAno.value = new Date().getFullYear();
 
-    // Preencher anos (exemplo: 2023 a 2030)
-    for(let y=2023; y<=2030; y++) {
-      let opt = document.createElement('option');
-      opt.value = y;
-      opt.text = y;
-      selectAno.appendChild(opt);
-    }
-    selectAno.value = new Date().getFullYear();
+  equipes.forEach((eq, idx) => {
+    let opt = document.createElement('option');
+    opt.value = idx;
+    opt.text = eq;
+    selectEquipe.appendChild(opt);
+  });
+  selectEquipe.value = -1;
+}
 
-    // Preencher equipes
-    equipes.forEach((eq, idx) => {
-      let opt = document.createElement('option');
-      opt.value = idx;
-      opt.text = eq;
-      selectEquipe.appendChild(opt);
-    });
-    selectEquipe.value = -1;
+async function carregarDados() {
+  return new Promise((resolve, reject) => {
+    db.ref('escala').once('value', snapshot => {
+      resolve(snapshot.val() || {});
+    }, error => reject(error));
+  });
+}
+
+async function gerarEscala() {
+  const mes = parseInt(document.getElementById('selectMes').value);
+  const ano = parseInt(document.getElementById('selectAno').value);
+  const eqIdx = parseInt(document.getElementById('selectEquipe').value);
+
+  const escalaDados = await carregarDados();
+  const totalDias = new Date(ano, mes + 1, 0).getDate();
+  let html = `<h3>Escala - ${meses[mes]} / ${ano}</h3>`;
+  html += `<table><thead><tr><th>Dia</th><th>Escala</th></tr></thead><tbody>`;
+
+  for(let dia = 1; dia <= totalDias; dia++) {
+    const diaStr = dia.toString().padStart(2, '0');
+    const mesStr = (mes+1).toString().padStart(2, '0');
+    const dataKey = `${ano}-${mesStr}-${diaStr}`;
+
+    const registros = escalaDados[dataKey] || [];
+    const registrosFiltrados = (eqIdx === -1) ? registros : registros.filter(r => r.equipe === equipes[eqIdx]);
+
+    let escalaDia = registrosFiltrados.length > 0 ?
+      registrosFiltrados.map(r => `${r.nome} (${r.turno})`).join(", ") :
+      "<i>Sem escala</i>";
+
+    html += `<tr><td>${diaStr}/${mesStr}</td><td>${escalaDia}</td></tr>`;
   }
 
-  // Função para carregar dados da escala do Firebase
-  async function carregarDados() {
-    return new Promise((resolve, reject) => {
-      db.ref('escala').once('value', snapshot => {
-        const data = snapshot.val() || {};
-        resolve(data);
-      }, error => reject(error));
-    });
-  }
+  html += `</tbody></table>`;
+  document.getElementById('relatorio').innerHTML = html;
+}
 
-  // Função que gera o calendário da escala filtrando por mês, ano e equipe
-  async function gerarEscala() {
-    const mes = parseInt(document.getElementById('selectMes').value);
-    const ano = parseInt(document.getElementById('selectAno').value);
-    const eqIdx = parseInt(document.getElementById('selectEquipe').value);
+function imprimirPDF() {
+  gerarEscala().then(() => {
+    setTimeout(() => window.print(), 500);
+  });
+}
 
-    // Carrega todos os dados
-    const escalaDados = await carregarDados();
-
-    // Filtrar os dados para o mês, ano e equipe selecionados
-    // Supondo que no Firebase você tem estrutura:
-    // escala: {
-    //   "2025-08-01": [{nome:"Fulano", equipe:"Equipe A", turno:"Manhã"}, ...],
-    //   "2025-08-02": [...],
-    //   ...
-    // }
-
-    // Vamos montar uma tabela do mês com os dias
-    // Primeiro, pega quantos dias no mês
-    const totalDias = new Date(ano, mes + 1, 0).getDate();
-
-    let html = `<h3>Escala - ${meses[mes]} / ${ano}</h3>`;
-    html += `<table><thead><tr><th>Dia</th><th>Escala</th></tr></thead><tbody>`;
-
-    for(let dia = 1; dia <= totalDias; dia++) {
-      // Formatar data YYYY-MM-DD
-      const diaStr = dia.toString().padStart(2, '0');
-      const mesStr = (mes+1).toString().padStart(2, '0');
-      const dataKey = `${ano}-${mesStr}-${diaStr}`;
-
-      const registros = escalaDados[dataKey] || [];
-
-      // Se selecionou uma equipe específica, filtra
-      const registrosFiltrados = (eqIdx === -1) ? registros : registros.filter(r => r.equipe === equipes[eqIdx]);
-
-      // Monta texto da escala do dia
-      let escalaDia = registrosFiltrados.length > 0 ?
-        registrosFiltrados.map(r => `${r.nome} (${r.turno})`).join(", ") :
-        "<i>Sem escala</i>";
-
-      html += `<tr><td>${diaStr}/${mesStr}</td><td>${escalaDia}</td></tr>`;
-    }
-
-    html += `</tbody></table>`;
-
-    document.getElementById('relatorio').innerHTML = html;
-  }
-
-  // Ao carregar a página
-  window.onload = async () => {
-    preencherMesAno();
-    await gerarEscala();
-  };
+window.onload = async () => {
+  preencherMesAno();
+  await gerarEscala();
+};
 </script>
 
 </body>
 </html>
+
 
