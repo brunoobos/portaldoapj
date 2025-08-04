@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -46,6 +47,73 @@
   .modal-content label { display: block; margin: 10px 0 4px; }
   .modal-content input, .modal-content select { width: 100%; padding: 6px; box-sizing: border-box; }
   .close { position: absolute; top: 10px; right: 15px; font-size: 20px; cursor: pointer; }
+  /* Responsividade geral */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  .section {
+    padding: 10px;
+  }
+
+  input, select, button {
+    width: 100%;
+    margin-top: 5px;
+    font-size: 16px;
+  }
+
+  .calendar {
+    grid-template-columns: repeat(7, 1fr);
+    font-size: 10px;
+  }
+
+  .calendar-day {
+    min-height: 70px;
+    font-size: 10px;
+    padding: 3px;
+  }
+
+  .modal-content {
+    width: 95% !important;
+    padding: 10px;
+  }
+
+  .modal-content label {
+    margin-top: 5px;
+  }
+
+  .modal-content input, .modal-content select {
+    font-size: 16px;
+  }
+
+  button {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .calendar-day {
+    font-size: 10px;
+  }
+
+  .event {
+    font-size: 9px;
+  }
+
+  .calendar-day .day-number {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 768px) {
+  .afastamento,
+  .observacao {
+    font-size: 9px;
+  }
+}
+
+
   
 </style>
 </head>
@@ -84,7 +152,17 @@
 
 <button id="btnAddTarefa">Adicionar Tarefa</button>
 
+
 <div id="relatorio"></div>
+
+<div style="margin-top: 20px;">
+  <label for="dataInicio">Data Início:</label>
+  <input type="date" id="dataInicio">
+  <label for="dataFim">Data Fim:</label>
+  <input type="date" id="dataFim">
+  <button onclick="imprimirPDF()">Imprimir PDF</button>
+</div>
+
 
 <!-- Modal afastamento -->
 <div id="modalAfastamento" class="modal">
@@ -739,6 +817,8 @@ document.getElementById('btnMostrarTudo').onclick = function() {
   mostrarAfastamentos = true;
   gerarEscala();
 };
+
+
 
 window.onload = iniciar;
 </script>
