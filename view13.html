@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Visualizador de Escala</title>
+<title>Visualizador de Escala 24x96</title>
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -13,6 +13,8 @@
   .section { background: #fff; border-radius: 5px; padding: 15px; margin-bottom: 20px; box-shadow: 0 0 5px #ccc; }
   button { padding: 8px 15px; margin: 5px; cursor: pointer; border-radius: 4px; border: none; }
   button#btnGerarEscala { background: #17a2b8; color: white; }
+  button#btnFiltrarAfastamentos { background: #6c757d; color: white; }
+  button#btnMostrarTudo { background: #6c757d; color: white; }
   .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 20px; }
   .calendar-day { border: 1px solid #ccc; border-radius: 4px; padding: 5px; min-height: 90px; font-size: 12px; background: #fff; position: relative; }
   .calendar-day.feriado { background-color: #b0b0b0 !important; color: #fff; }
@@ -24,6 +26,7 @@
   .ferias { background: #ffc107; color: #333; }
   .licenca { background: #dc3545; }
   .compensacao { background: #6f42c1; }
+  .afastamento-oculto { display: none !important; }
   
   /* Responsividade */
   @media (max-width: 768px) {
@@ -56,6 +59,12 @@
     <input type="date" id="dataFim">
     <button onclick="imprimirPDF()">Imprimir PDF</button>
   </div>
+</div>
+
+<div class="section">
+  <h2>Filtros de Visualização</h2>
+  <button id="btnFiltrarAfastamentos">Ocultar Afastamentos</button>
+  <button id="btnMostrarTudo">Mostrar Tudo</button>
 </div>
 
 <div id="relatorio"></div>
@@ -227,7 +236,8 @@ function gerarEscala() {
             ? equipes[af.equipe]?.fixo || 'Fixo desconhecido'
             : equipes[af.equipe]?.rotativos[parseInt(af.membro[1])] || 'Rotativo desconhecido';
 
-        html += `<div class="afastamento ${af.tipo.toLowerCase()}">${nomeMembro} - ${af.tipo}</div>`;
+        let classeAfastamento = mostrarAfastamentos ? '' : 'afastamento-oculto';
+        html += `<div class="afastamento ${af.tipo.toLowerCase()} ${classeAfastamento}">${nomeMembro} - ${af.tipo}</div>`;
       }
     });
 
@@ -320,6 +330,16 @@ function imprimirPDF() {
 // Event Listeners
 document.getElementById('btnGerarEscala').onclick = gerarEscala;
 
+document.getElementById('btnFiltrarAfastamentos').onclick = function() {
+  mostrarAfastamentos = false;
+  gerarEscala();
+};
+
+document.getElementById('btnMostrarTudo').onclick = function() {
+  mostrarAfastamentos = true;
+  gerarEscala();
+};
+
 function iniciar() {
   preencherMesAno();
   carregarDados();
@@ -330,5 +350,3 @@ window.onload = iniciar;
 
 </body>
 </html>
-
-
