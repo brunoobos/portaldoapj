@@ -112,6 +112,17 @@
     font-size: 9px;
   }
 }
+.calendar-day {
+  font-size: 16px; /* Tamanho padrão */
+  padding: 5px;
+}
+
+/* Reduz em telas pequenas */
+@media (max-width: 600px) {
+  .calendar-day {
+    font-size: 12px;
+  }
+}
 
 
   
@@ -161,6 +172,7 @@
   <label for="dataFim">Data Fim:</label>
   <input type="date" id="dataFim">
   <button onclick="imprimirPDF()">Imprimir PDF</button>
+  
 </div>
 
 
@@ -220,6 +232,8 @@
     <button onclick="salvarNovaTarefa()">Salvar</button>
   </div>
 </div>
+
+  
 
 <script>
 // Configuração do Firebase
@@ -817,6 +831,47 @@ document.getElementById('btnMostrarTudo').onclick = function() {
   mostrarAfastamentos = true;
   gerarEscala();
 };
+
+function imprimirPDF() {
+  const dataInicio = document.getElementById('dataInicio').value;
+  const dataFim = document.getElementById('dataFim').value;
+
+  if (!dataInicio || !dataFim) {
+    alert('Por favor, selecione o período completo.');
+    return;
+  }
+
+  const dataInicioDate = new Date(dataInicio);
+  const dataFimDate = new Date(dataFim);
+
+  // Mostra o período no topo
+  const periodoTexto = `Período: ${dataInicio} até ${dataFim}`;
+  const tituloPeriodo = document.createElement('h3');
+  tituloPeriodo.id = 'periodo-print';
+  tituloPeriodo.innerText = periodoTexto;
+  document.body.insertBefore(tituloPeriodo, document.body.firstChild);
+
+  // Esconde dias fora do intervalo
+  const dias = document.querySelectorAll('.calendar-day');
+  dias.forEach(dia => {
+    const diaNumero = dia.getAttribute('data-date');
+    if (!diaNumero) return;
+
+    const dataAtual = new Date(diaNumero);
+    if (dataAtual < dataInicioDate || dataAtual > dataFimDate) {
+      dia.style.display = 'none';
+    }
+  });
+
+  window.print();
+
+  // Depois da impressão, volta ao normal
+  tituloPeriodo.remove();
+  dias.forEach(dia => {
+    dia.style.display = '';
+  });
+}
+
 
 
 
