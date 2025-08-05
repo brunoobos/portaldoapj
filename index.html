@@ -3,77 +3,194 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Escala DAESP - Menu</title>
+  <title>Escala DAESP - Menu Principal</title>
   <style>
+    :root {
+      --primary-color: #2c3e50;
+      --secondary-color: #3498db;
+      --success-color: #28a745;
+      --info-color: #17a2b8;
+      --light-color: #f8f9fa;
+      --dark-color: #343a40;
+    }
+    
     body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
       display: flex;
       height: 100vh;
       justify-content: center;
       align-items: center;
       margin: 0;
+      padding: 20px;
     }
+    
     .container {
       background: white;
-      padding: 30px 40px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px #aaa;
+      padding: 40px 50px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
       text-align: center;
+      max-width: 500px;
+      width: 100%;
+      transition: transform 0.3s, box-shadow 0.3s;
     }
+    
+    .container:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+    }
+    
+    .logo {
+      width: 120px;
+      margin-bottom: 20px;
+    }
+    
     h1 {
-      margin-bottom: 25px;
+      color: var(--primary-color);
+      margin-bottom: 30px;
+      font-size: 28px;
+      position: relative;
+      padding-bottom: 10px;
     }
-    button {
-      width: 200px;
-      padding: 12px 0;
-      margin: 10px 0;
-      font-size: 18px;
+    
+    h1::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 3px;
+      background: var(--secondary-color);
+    }
+    
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 30px;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 14px 0;
+      font-size: 16px;
+      font-weight: 500;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
       color: white;
-      transition: background 0.3s;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
-    button#btnAdmin {
-      background-color: #007bff;
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
     }
-    button#btnAdmin:hover {
-      background-color: #0056b3;
+    
+    .btn i {
+      margin-right: 10px;
+      font-size: 18px;
     }
-    button#btnEscala {
-      background-color: #28a745;
+    
+    .btn-admin {
+      background-color: var(--primary-color);
     }
-    button#btnEscala:hover {
-      background-color: #1e7e34;
+    
+    .btn-admin:hover {
+      background-color: #1a252f;
     }
-    button#btnPortal {
-      background-color: #6c757d;
+    
+    .btn-escala {
+      background-color: var(--success-color);
     }
-    button#btnPortal:hover {
-      background-color: #5a6268;
+    
+    .btn-escala:hover {
+      background-color: #218838;
+    }
+    
+    .btn-portal {
+      background-color: var(--info-color);
+    }
+    
+    .btn-portal:hover {
+      background-color: #138496;
+    }
+    
+    .version {
+      margin-top: 30px;
+      color: #6c757d;
+      font-size: 14px;
+    }
+    
+    @media (max-width: 576px) {
+      .container {
+        padding: 30px 25px;
+      }
+      
+      h1 {
+        font-size: 24px;
+      }
+      
+      .btn {
+        padding: 12px 0;
+        font-size: 15px;
+      }
     }
   </style>
+  <!-- Font Awesome para ícones -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
   <div class="container">
+    <!-- Adicione seu logo aqui -->
+    <!-- <img src="logo-daesp.png" alt="Logo DAESP" class="logo"> -->
+    
     <h1>Escala DAESP</h1>
-    <button id="btnAdmin">Área Administrativa</button><br/>
-    <button id="btnEscala">Visualizar Escala</button><br/>
-    <button id="btnPortal">Portal do APJ</button><br/>
+    
+    <div class="btn-group">
+      <button class="btn btn-admin" id="btnAdmin">
+        <i class="fas fa-user-cog"></i> Área Administrativa
+      </button>
+      
+      <button class="btn btn-escala" id="btnEscala">
+        <i class="fas fa-calendar-alt"></i> Visualizar Escala
+      </button>
+      
+      <button class="btn btn-portal" id="btnPortal">
+        <i class="fas fa-external-link-alt"></i> Portal do APJ
+      </button>
+    </div>
+    
+    <div class="version">Versão 2.0 - Agosto 2025</div>
   </div>
 
   <script>
-    document.getElementById('btnAdmin').onclick = () => {
+    document.getElementById('btnAdmin').addEventListener('click', () => {
       window.location.href = 'admin-daesp-old.html';
-    };
-    document.getElementById('btnEscala').onclick = () => {
+    });
+    
+    document.getElementById('btnEscala').addEventListener('click', () => {
       window.location.href = 'view13.html';
-    };
-    document.getElementById('btnPortal').onclick = () => {
+    });
+    
+    document.getElementById('btnPortal').addEventListener('click', () => {
       window.open('https://sites.google.com/trt1.jus.br/portaldoapj?usp=sharing', '_blank');
-    };
+    });
+    
+    // Efeito de carregamento suave
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.style.opacity = 1;
+    });
   </script>
 </body>
 </html>
+
+
+
 
