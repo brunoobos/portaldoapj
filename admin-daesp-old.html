@@ -259,6 +259,11 @@ try {
   alert("Erro ao conectar com o banco de dados. Verifique sua conexão com a internet.");
 }
 
+  console.log("Configuração carregada:", {
+  apiKey: process.env.FIREBASE_API_KEY ? "OK" : "FALTA VARIÁVEL",
+  projectId: process.env.FIREBASE_PROJECT_ID ? "OK" : "FALTA VARIÁVEL"
+});
+
 let equipes = [];
 let afastamentos = [];
 let feriados = [];
