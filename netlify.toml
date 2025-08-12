@@ -1,5 +1,5 @@
-[build]
-  command = "echo 'Build completo'"
+  [build]
+  command = "node inject-env.js && echo 'Variáveis injetadas'"
   publish = "."
 
 [build.environment]
