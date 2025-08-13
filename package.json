@@ -1,0 +1,13 @@
+cat > package.json <<EOL
+{
+  "name": "portaldoapj",
+  "version": "1.0.0",
+  "scripts": {
+    "prebuild": "node inject-env.js",
+    "build": "echo 'Build completo'"
+  },
+  "dependencies": {
+    "firebase": "^9.6.0"
+  }
+}
+EOL
