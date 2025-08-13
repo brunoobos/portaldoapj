@@ -1,6 +1,6 @@
-  [build]
-  command = "node inject-env.js && echo 'Variáveis injetadas'"
-  publish = "."
+[build]
+  command = "npm run build"
+  publish = "public"
 
 [build.environment]
   FIREBASE_API_KEY = "AIzaSyCMYqcUU-fOB5nQoU2lBVnJIU_xzsk3eC0"
