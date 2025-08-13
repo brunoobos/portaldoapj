@@ -1,4 +1,3 @@
-cat > package.json <<EOL
 {
   "name": "portaldoapj",
   "version": "1.0.0",
@@ -10,4 +9,3 @@ cat > package.json <<EOL
     "firebase": "^9.6.0"
   }
 }
-EOL
